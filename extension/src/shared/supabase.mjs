@@ -155,3 +155,64 @@ export async function submitAppeal(config, appeal, fetchImpl = globalThis.fetch)
     createdAt: savedAppeal.created_at,
   };
 }
+
+export async function recordVerdictHistory(
+  config,
+  entry,
+  fetchImpl = globalThis.fetch
+) {
+  if (!isSupabaseConfigured(config)) {
+    throw new Error("Supabase is not configured for this extension.");
+  }
+
+  if (!entry?.contentKey || !entry?.eventType) {
+    throw new Error("A content key and verdict event type are required.");
+  }
+
+  const response = await fetchImpl(
+    `${String(config.url).replace(/\/+$/, "")}/rest/v1/rpc/record_verdict_history`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        p_content_key: entry.contentKey,
+        p_event_type: entry.eventType,
+        p_label: entry.label ?? null,
+        p_slop_score: entry.slopScore ?? null,
+        p_detector_score: entry.detectorScore ?? null,
+        p_community_score: entry.communityScore ?? null,
+        p_metadata: entry.metadata ?? {},
+      }),
+    }
+  );
+
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      body?.message || `Supabase verdict-history request failed (HTTP ${response.status}).`
+    );
+  }
+
+  if (!Array.isArray(body) || body.length !== 1) {
+    throw new Error("Supabase did not return the saved verdict-history event.");
+  }
+
+  const savedEntry = body[0];
+  return {
+    id: savedEntry.id,
+    contentKey: savedEntry.content_key,
+    eventType: savedEntry.event_type,
+    label: savedEntry.label,
+    slopScore: savedEntry.slop_score === null ? null : Number(savedEntry.slop_score),
+    detectorScore:
+      savedEntry.detector_score === null ? null : Number(savedEntry.detector_score),
+    communityScore:
+      savedEntry.community_score === null ? null : Number(savedEntry.community_score),
+    metadata: savedEntry.metadata,
+    createdAt: savedEntry.created_at,
+  };
+}

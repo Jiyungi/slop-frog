@@ -129,24 +129,44 @@ begin
   where reviewers.reviewer_id = p_reviewer_id;
 
   return query
-  insert into public.community_votes (
-    content_key,
-    reviewer_id,
-    vote,
-    reviewer_weight
+  with saved_vote as (
+    insert into public.community_votes (
+      content_key,
+      reviewer_id,
+      vote,
+      reviewer_weight
+    )
+    values (p_content_key, p_reviewer_id, p_vote, canonical_weight)
+    on conflict on constraint community_votes_content_key_reviewer_id_key do update
+    set
+      vote = excluded.vote,
+      reviewer_weight = excluded.reviewer_weight,
+      created_at = now()
+    returning
+      community_votes.content_key,
+      community_votes.reviewer_id,
+      community_votes.vote,
+      community_votes.reviewer_weight,
+      community_votes.created_at
+  ), recorded_history as (
+    insert into public.verdict_history (content_key, event_type, metadata)
+    select
+      saved_vote.content_key,
+      'community_vote_updated',
+      jsonb_build_object(
+        'reviewer_id', saved_vote.reviewer_id,
+        'vote', saved_vote.vote,
+        'reviewer_weight', saved_vote.reviewer_weight
+      )
+    from saved_vote
   )
-  values (p_content_key, p_reviewer_id, p_vote, canonical_weight)
-  on conflict on constraint community_votes_content_key_reviewer_id_key do update
-  set
-    vote = excluded.vote,
-    reviewer_weight = excluded.reviewer_weight,
-    created_at = now()
-  returning
-    community_votes.content_key,
-    community_votes.reviewer_id,
-    community_votes.vote,
-    community_votes.reviewer_weight,
-    community_votes.created_at;
+  select
+    saved_vote.content_key,
+    saved_vote.reviewer_id,
+    saved_vote.vote,
+    saved_vote.reviewer_weight,
+    saved_vote.created_at
+  from saved_vote;
 end;
 $$;
 
@@ -267,18 +287,118 @@ begin
   end if;
 
   return query
-  insert into public.appeals (content_key, reviewer_id, reason, status)
-  values (p_content_key, p_reviewer_id, p_reason, p_status)
-  returning
-    appeals.id,
-    appeals.content_key,
-    appeals.reviewer_id,
-    appeals.reason,
-    appeals.status,
-    appeals.created_at;
+  with saved_appeal as (
+    insert into public.appeals (content_key, reviewer_id, reason, status)
+    values (p_content_key, p_reviewer_id, p_reason, p_status)
+    returning
+      appeals.id,
+      appeals.content_key,
+      appeals.reviewer_id,
+      appeals.reason,
+      appeals.status,
+      appeals.created_at
+  ), recorded_history as (
+    insert into public.verdict_history (content_key, event_type, metadata)
+    select
+      saved_appeal.content_key,
+      'appeal_submitted',
+      jsonb_build_object(
+        'appeal_id', saved_appeal.id,
+        'reviewer_id', saved_appeal.reviewer_id,
+        'reason', saved_appeal.reason,
+        'status', saved_appeal.status
+      )
+    from saved_appeal
+  )
+  select
+    saved_appeal.id,
+    saved_appeal.content_key,
+    saved_appeal.reviewer_id,
+    saved_appeal.reason,
+    saved_appeal.status,
+    saved_appeal.created_at
+  from saved_appeal;
 end;
 $$;
 
 revoke all on function public.submit_appeal(text, text, text, text) from public;
 grant execute on function public.submit_appeal(text, text, text, text)
 to anon, authenticated;
+
+create or replace function public.record_verdict_history(
+  p_content_key text,
+  p_event_type text,
+  p_label text default null,
+  p_slop_score numeric default null,
+  p_detector_score numeric default null,
+  p_community_score numeric default null,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns table (
+  id uuid,
+  content_key text,
+  event_type text,
+  label text,
+  slop_score numeric,
+  detector_score numeric,
+  community_score numeric,
+  metadata jsonb,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce(trim(p_content_key), '') = '' then
+    raise exception 'content_key is required';
+  end if;
+
+  if p_event_type not in (
+    'initial_score',
+    'community_vote_updated',
+    'appeal_submitted',
+    'appeal_resolved',
+    'label_changed'
+  ) then
+    raise exception 'unsupported verdict event type';
+  end if;
+
+  return query
+  insert into public.verdict_history (
+    content_key,
+    event_type,
+    label,
+    slop_score,
+    detector_score,
+    community_score,
+    metadata
+  )
+  values (
+    p_content_key,
+    p_event_type,
+    p_label,
+    p_slop_score,
+    p_detector_score,
+    p_community_score,
+    coalesce(p_metadata, '{}'::jsonb)
+  )
+  returning
+    verdict_history.id,
+    verdict_history.content_key,
+    verdict_history.event_type,
+    verdict_history.label,
+    verdict_history.slop_score,
+    verdict_history.detector_score,
+    verdict_history.community_score,
+    verdict_history.metadata,
+    verdict_history.created_at;
+end;
+$$;
+
+revoke all on function public.record_verdict_history(
+  text, text, text, numeric, numeric, numeric, jsonb
+) from public;
+grant execute on function public.record_verdict_history(
+  text, text, text, numeric, numeric, numeric, jsonb
+) to anon, authenticated;

@@ -186,7 +186,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 12.1, 12.2, 12.3_
     - **Verification:** Submitting a demo appeal creates a row in `appeals`.
 
-  - [ ] 13.2 Implement verdict history insert helper
+  - [x] 13.2 Implement verdict history insert helper
     - Store score and label change events.
     - _Requirements: 12.4, 12.5, 12.7_
     - **Verification:** A demo vote or appeal creates a `verdict_history` row.

@@ -30,3 +30,10 @@ Appeals use the separate `submit_appeal` RPC and preserve the submitted status:
 ```sh
 /opt/homebrew/bin/node supabase/dev/verify-appeal.mjs
 ```
+
+Each vote and appeal writes an immutable verdict-history event automatically.
+Use the generic score/label change helper directly with:
+
+```sh
+/opt/homebrew/bin/node supabase/dev/verify-history.mjs
+```
