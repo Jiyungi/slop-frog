@@ -1,0 +1,50 @@
+[
+  {
+    "name": "short-gray",
+    "expectedLabel": "gray",
+    "post": {
+      "platform": "x",
+      "contentKey": "x:fixture-short-gray",
+      "tweetId": "fixture-short-gray",
+      "url": "https://x.com/slopfrog/status/1000000000000000001",
+      "authorHandle": "slopfrog",
+      "visibleText": "Wild if true.",
+      "normalizedText": "wild if true.",
+      "textHash": "fixture_hash_short_gray",
+      "imageUrls": [],
+      "extractedAt": "2026-07-18T21:00:00.000Z"
+    }
+  },
+  {
+    "name": "medium-yellow",
+    "expectedLabel": "yellow",
+    "post": {
+      "platform": "x",
+      "contentKey": "x:fixture-medium-yellow",
+      "tweetId": "fixture-medium-yellow",
+      "url": "https://x.com/slopfrog/status/1000000000000000002",
+      "authorHandle": "slopfrog",
+      "visibleText": "I used an AI writing assistant to clean up this post, but the argument and examples are mine. The final version is smoother than my draft and probably sounds a little too polished.",
+      "normalizedText": "i used an ai writing assistant to clean up this post, but the argument and examples are mine. the final version is smoother than my draft and probably sounds a little too polished.",
+      "textHash": "fixture_hash_medium_yellow",
+      "imageUrls": [],
+      "extractedAt": "2026-07-18T21:00:00.000Z"
+    }
+  },
+  {
+    "name": "high-risk-red",
+    "expectedLabel": "red",
+    "post": {
+      "platform": "x",
+      "contentKey": "x:fixture-high-risk-red",
+      "tweetId": "fixture-high-risk-red",
+      "url": "https://x.com/slopfrog/status/1000000000000000003",
+      "authorHandle": "slopfrog",
+      "visibleText": "In today's rapidly evolving digital landscape, it is crucial to leverage cutting-edge artificial intelligence solutions to unlock unprecedented productivity, streamline workflows, and empower individuals across every sector with transformative capabilities.",
+      "normalizedText": "in today's rapidly evolving digital landscape, it is crucial to leverage cutting-edge artificial intelligence solutions to unlock unprecedented productivity, streamline workflows, and empower individuals across every sector with transformative capabilities.",
+      "textHash": "fixture_hash_high_risk_red",
+      "imageUrls": [],
+      "extractedAt": "2026-07-18T21:00:00.000Z"
+    }
+  }
+]
