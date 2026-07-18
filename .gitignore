@@ -5,4 +5,4 @@
 # Large local model artifacts are provisioned separately and must not be committed.
 /local-detector/models/
 /local-detector/.venv/
-/local-detector/__pycache__/
+/local-detector/**/__pycache__/
