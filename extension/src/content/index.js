@@ -118,9 +118,9 @@
     mount.replaceChildren(
       createControlButton({
         kind: "evidence",
-        label: "Scoring",
+        label: "",
         title: "Scoring",
-        icon: iconFrog(),
+        icon: iconVerdictFlag("loading"),
         tone: "loading",
         onClick: () => {},
       })
@@ -141,22 +141,22 @@
     mount.replaceChildren(
       createControlButton({
         kind: "evidence",
-        label: formatFlagLabel(result),
+        label: "",
         title: "View Slop Score evidence",
-        icon: iconFrog(),
+        icon: iconVerdictFlag(result.label),
         tone: result.label,
         onClick: () => togglePanel(article, "evidence"),
       }),
       createControlButton({
         kind: "feedback",
         title: "Add feedback",
-        icon: iconFeedback(),
+        icon: iconFrogFeedback(),
         onClick: () => togglePanel(article, "feedback"),
       }),
       createControlButton({
         kind: "appeal",
         title: "Appeal label",
-        icon: iconAppeal(),
+        icon: iconAppealScale(),
         onClick: () => togglePanel(article, "appeal"),
       })
     );
@@ -200,8 +200,6 @@
     let mount = article.querySelector(":scope .slop-frog-controls");
     if (mount) return mount;
 
-    article.classList.add("slop-frog-anchored");
-
     const slot = document.createElement("div");
     slot.className = "slop-frog-slot";
 
@@ -211,9 +209,24 @@
     mount.setAttribute("aria-label", "Slop Frog controls");
 
     slot.append(mount);
-    article.append(slot);
+    const actionGroup = findOuterActionGroup(article);
+    if (actionGroup) {
+      actionGroup.insertAdjacentElement("afterend", slot);
+    } else {
+      article.append(slot);
+    }
 
     return mount;
+  }
+
+  function findOuterActionGroup(article) {
+    const groups = Array.from(article.querySelectorAll('[role="group"]')).filter(
+      (group) =>
+        group.querySelector(
+          '[data-testid="reply"], [data-testid="retweet"], [data-testid="like"]'
+        )
+    );
+    return groups.at(-1) || null;
   }
 
   function togglePanel(article, kind) {
@@ -501,6 +514,24 @@
     return iconSvg("M5 4v17M6 5h11l-2 4 2 4H6");
   }
 
+  function iconVerdictFlag(label) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-flag-mark", `is-${label}`);
+    svg.append(
+      svgEl("path", {
+        d: "M6 20V4.8c0-.8.6-1.4 1.4-1.4h9.7c.7 0 1.1.8.7 1.4l-1.7 2.7 1.7 2.7c.4.6 0 1.4-.7 1.4H7.8V20H6Z",
+        fill: "currentColor",
+      }),
+      svgEl("path", {
+        d: "M8 5.4h7.6l-1.2 2.1 1.2 2.1H8V5.4Z",
+        fill: "color-mix(in oklch, white 28%, currentColor)",
+      })
+    );
+    return svg;
+  }
+
   function iconFrog() {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -530,8 +561,52 @@
     return iconSvg("M4 5h16v10H8l-4 4V5Zm5 5 2 2 4-5");
   }
 
+  function iconFrogFeedback() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-feedback-mark");
+    svg.append(
+      svgEl("path", {
+        d: "M4 6.8c0-1 .8-1.8 1.8-1.8h12.4c1 0 1.8.8 1.8 1.8v7.8c0 1-.8 1.8-1.8 1.8H10l-4.2 3.1c-.6.4-1.4 0-1.4-.7v-2.9A1.8 1.8 0 0 1 4 14.6V6.8Z",
+        fill: "currentColor",
+      }),
+      svgEl("circle", { cx: 9.3, cy: 10.2, r: 2.1, fill: "color-mix(in oklch, white 22%, currentColor)" }),
+      svgEl("circle", { cx: 14.7, cy: 10.2, r: 2.1, fill: "color-mix(in oklch, white 22%, currentColor)" }),
+      svgEl("circle", { cx: 9.4, cy: 10.2, r: 0.65, fill: "Canvas" }),
+      svgEl("circle", { cx: 14.6, cy: 10.2, r: 0.65, fill: "Canvas" }),
+      svgEl("path", {
+        d: "M9.8 13.1c1.4.8 3 .8 4.4 0",
+        fill: "none",
+        stroke: "Canvas",
+        "stroke-width": "1.2",
+        "stroke-linecap": "round",
+      })
+    );
+    return svg;
+  }
+
   function iconAppeal() {
     return iconSvg("M12 3 5 6v5c0 4 3 7 7 9 4-2 7-5 7-9V6l-7-3Zm0 5v5m0 3h.01");
+  }
+
+  function iconAppealScale() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-appeal-mark");
+    svg.append(
+      svgEl("path", {
+        d: "M12 4v15M7 19h10M5 8h14M12 8 8 14H4l4-6m8 0 4 6h-4l-4-6",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "1.8",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      }),
+      svgEl("circle", { cx: 12, cy: 8, r: 2, fill: "currentColor" })
+    );
+    return svg;
   }
 
   function iconSvg(pathData) {
@@ -589,25 +664,18 @@
         z-index: 4;
       }
 
-      article.slop-frog-anchored {
-        position: relative !important;
-        padding-bottom: 38px !important;
-      }
-
       .slop-frog-slot {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        position: absolute;
-        left: 58px;
-        bottom: 9px;
-        z-index: 2;
-        width: fit-content;
+        display: block;
+        width: 100% !important;
         min-width: 0;
-        max-width: calc(100% - 74px);
-        margin: 0;
+        max-width: 100%;
+        flex: 0 0 100%;
+        align-self: stretch !important;
+        margin: 6px 0 0 0 !important;
+        padding: 0 !important;
         text-align: left;
         pointer-events: none;
+        clear: both;
       }
 
       .slop-frog-slot .slop-frog-controls,
@@ -638,21 +706,26 @@
         align-items: center;
         justify-content: center;
         gap: 5px;
-        min-height: 26px;
-        padding: 5px 10px;
+        width: 31px;
+        min-width: 31px;
+        height: 29px;
+        min-height: 29px;
+        padding: 0;
       }
 
       .slop-frog-button svg {
-        width: 14px;
-        height: 14px;
+        width: 17px;
+        height: 17px;
       }
 
       .slop-frog-button.is-feedback,
       .slop-frog-button.is-appeal {
-        width: 27px;
-        min-height: 26px;
+        width: 31px;
+        min-width: 31px;
+        height: 29px;
+        min-height: 29px;
         justify-content: center;
-        padding: 5px;
+        padding: 0;
         color: oklch(82% 0.14 151);
         background:
           linear-gradient(180deg, oklch(21% 0.04 154), oklch(14.5% 0.026 154));
@@ -678,17 +751,17 @@
       }
 
       .slop-frog-button.is-red {
-        color: oklch(73% 0.19 31);
+        color: oklch(68% 0.22 31);
         background: color-mix(in oklch, oklch(73% 0.19 31) 16%, transparent);
       }
 
       .slop-frog-button.is-yellow {
-        color: oklch(82% 0.16 82);
+        color: oklch(83% 0.18 83);
         background: color-mix(in oklch, oklch(82% 0.16 82) 16%, transparent);
       }
 
       .slop-frog-button.is-green {
-        color: oklch(75% 0.18 150);
+        color: oklch(75% 0.2 150);
         background: color-mix(in oklch, oklch(75% 0.18 150) 17%, transparent);
       }
 
@@ -703,6 +776,10 @@
       }
 
       .slop-frog-button.is-loading .slop-frog-mark {
+        animation: slop-frog-pulse 900ms ease-in-out infinite;
+      }
+
+      .slop-frog-button.is-loading .slop-frog-flag-mark {
         animation: slop-frog-pulse 900ms ease-in-out infinite;
       }
 

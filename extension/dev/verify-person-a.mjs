@@ -64,14 +64,20 @@ assert(
   "appeal panel sends appeal action"
 );
 assert(
-  contentScript.includes('label: "Scoring"'),
-  "pending detector state shows Scoring, not Gray"
+  contentScript.includes('icon: iconVerdictFlag("loading")'),
+  "pending detector state shows icon-only loading flag"
 );
 assert(
   contentScript.includes('slot.className = "slop-frog-slot"') &&
-    contentScript.includes('article.classList.add("slop-frog-anchored")') &&
-    contentScript.includes("position: absolute"),
-  "controls are anchored to article bottom-left"
+    contentScript.includes("findOuterActionGroup(article)") &&
+    contentScript.includes('actionGroup.insertAdjacentElement("afterend", slot)'),
+  "controls render after X action row without entering it"
+);
+assert(
+  contentScript.includes("iconVerdictFlag(result.label)") &&
+    contentScript.includes("iconFrogFeedback()") &&
+    contentScript.includes("iconAppealScale()"),
+  "compact controls use branded icon-only actions"
 );
 assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),
