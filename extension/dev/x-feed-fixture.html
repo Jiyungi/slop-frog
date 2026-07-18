@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slop Frog X Fixture</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      body {
+        display: grid;
+        justify-content: center;
+        margin: 0;
+        background: oklch(97% 0 0);
+        color: oklch(21% 0.01 255);
+      }
+
+      main {
+        width: min(620px, 100vw);
+        border-inline: 1px solid oklch(88% 0 0);
+        background: white;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 16px;
+        border-bottom: 1px solid oklch(88% 0 0);
+        background: color-mix(in oklch, white 92%, transparent);
+        backdrop-filter: blur(10px);
+      }
+
+      h1,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      article {
+        padding: 16px;
+        border-bottom: 1px solid oklch(90% 0 0);
+      }
+
+      .tweet-meta {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .tweet-meta span:last-child {
+        color: oklch(44% 0 0);
+      }
+
+      [data-testid="tweetText"] {
+        font-size: 15px;
+        line-height: 1.45;
+      }
+
+      [role="group"] {
+        display: flex;
+        gap: 18px;
+        margin-top: 12px;
+        color: oklch(46% 0 0);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>X fixture</h1>
+        <p>Three local posts, mocked detector responses.</p>
+      </header>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <strong>Local Reporter</strong>
+          <span>@localreporter</span>
+          <a href="https://x.com/localreporter/status/10001">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">
+          City council voted tonight after three hours of public comment. The
+          bike lane pilot passed 6-3 and starts on September 1.
+        </div>
+        <div role="group" aria-label="Post actions">
+          <span>Reply</span><span>Repost</span><span>Like</span>
+        </div>
+      </article>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <strong>Growth Thread Lab</strong>
+          <span>@growththreadlab</span>
+          <a href="https://x.com/growththreadlab/status/10002">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">
+          Unlock your limitless potential with these ten game-changing habits
+          that will transform your productivity, elevate your mindset, and help
+          you dominate every area of life. Number seven will surprise you.
+        </div>
+        <div role="group" aria-label="Post actions">
+          <span>Reply</span><span>Repost</span><span>Like</span>
+        </div>
+      </article>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <strong>tiny frog</strong>
+          <span>@tinyfrog</span>
+          <a href="https://x.com/tinyfrog/status/10003">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">same</div>
+        <div role="group" aria-label="Post actions">
+          <span>Reply</span><span>Repost</span><span>Like</span>
+        </div>
+      </article>
+    </main>
+
+    <script>
+      globalThis.chrome = {
+        runtime: {
+          sendMessage(message, callback) {
+            if (message.type === "SLOP_FROG_GET_SETTINGS") {
+              callback({
+                ok: true,
+                settings: {
+                  evidenceCoverageMinimum: 50,
+                  redThreshold: 75,
+                  yellowThreshold: 40,
+                  localDetectorUrl: "http://localhost:8765",
+                  showNumericScore: true,
+                  autoFilterRed: false,
+                },
+              });
+              return;
+            }
+
+            if (message.type === "SLOP_FROG_SCORE_POST") {
+              const text = message.post.normalizedText;
+              const red = text.includes("Unlock your limitless potential");
+              const gray = text === "same";
+              const score = red ? 86 : gray ? null : 18;
+              callback({
+                ok: true,
+                result: {
+                  contentKey: message.post.contentKey,
+                  label: gray ? "gray" : red ? "red" : "green",
+                  slopScore: score,
+                  detectorScore: score,
+                  communityScore: null,
+                  evidenceCoverage: gray ? 18 : 80,
+                  reasons: gray
+                    ? ["not_enough_signal"]
+                    : red
+                      ? ["generic phrasing", "listicle pattern"]
+                      : ["specific local details"],
+                  autoFiltered: false,
+                },
+                scoreResponse: {
+                  ok: !gray,
+                  detectorScore: score,
+                  evidenceCoverage: gray ? 18 : 80,
+                  labelRecommendation: gray ? "gray" : red ? "red" : "green",
+                  reasons: gray ? ["not_enough_signal"] : ["text signal"],
+                  modalityScores: {
+                    text: gray
+                      ? { status: "not_enough_signal", reason: "too short" }
+                      : { status: "available", score },
+                    image: { status: "unsupported", reason: "mvp_text_first" },
+                    audio: { status: "unsupported", reason: "mvp_text_first" },
+                    video: { status: "unsupported", reason: "mvp_text_first" },
+                  },
+                  modelName: "fixture-detector",
+                  modelVersion: "0.1.0",
+                },
+                communityAggregate: null,
+                scoreHistory: [
+                  { createdAt: "2026-07-15T00:00:00Z", slopScore: score, label: red ? "red" : "green" },
+                  { createdAt: "2026-07-16T00:00:00Z", slopScore: score, label: red ? "red" : "green" },
+                  { createdAt: "2026-07-17T00:00:00Z", slopScore: score, label: red ? "red" : "green" },
+                ].filter((point) => point.slopScore !== null),
+                volumeHistory: [
+                  { volume: 1, slopScore: score },
+                  { volume: 5, slopScore: score },
+                  { volume: 12, slopScore: score },
+                ].filter((point) => point.slopScore !== null),
+              });
+              return;
+            }
+
+            callback({ ok: true });
+          },
+        },
+        storage: {
+          local: {
+            get(_keys, callback) {
+              callback({});
+            },
+            set(_values, callback) {
+              callback?.();
+            },
+          },
+        },
+      };
+    </script>
+    <script src="../src/shared/runtime.js"></script>
+    <script src="../src/content/index.js"></script>
+  </body>
+</html>
