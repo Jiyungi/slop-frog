@@ -6,6 +6,7 @@
   let activeAdapter;
   let observer;
   let scanTimer;
+  let stopped = false;
 
   injectStyles();
   queueMicrotask(() => {
@@ -19,6 +20,7 @@
     activeAdapter = getPlatformAdapter(window.location);
     if (!activeAdapter) return;
     settings = await getSettings();
+    if (stopped) return;
     scanVisiblePosts();
     observer = new MutationObserver(queueScan);
     observer.observe(document.body, { childList: true, subtree: true });
@@ -32,12 +34,13 @@
   }
 
   function queueScan() {
+    if (stopped) return;
     window.clearTimeout(scanTimer);
     scanTimer = window.setTimeout(scanVisiblePosts, 180);
   }
 
   function scanVisiblePosts() {
-    if (!activeAdapter) return;
+    if (stopped || !activeAdapter) return;
     const articles = activeAdapter.findPosts(document);
 
     for (const article of articles) {
@@ -53,7 +56,13 @@
 
       sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope })
         .then((response) => renderScored(article, response))
-        .catch(() => renderScored(article, makeLocalGrayResponse(article, "extension_context_invalidated")));
+        .catch((error) => {
+          if (isContextInvalidation(error?.message)) {
+            stopContentScript();
+            return;
+          }
+          renderScored(article, makeLocalGrayResponse(article, "extension_unavailable"));
+        });
     }
   }
 
@@ -312,7 +321,8 @@
   }
 
   function renderScored(article, response) {
-    const payload = normalizePanelPayload(response);
+    const payload = normalizePanelPayload(response, article);
+    if (!payload) return;
     const result = payload.result;
     const mount = ensureMount(article);
 
@@ -623,9 +633,13 @@
     return close;
   }
 
-  function normalizePanelPayload(response) {
+  function normalizePanelPayload(response, article) {
     if (response?.ok && response.result) return response;
-    return makeLocalGrayResponse(null, response?.error || "extension_unavailable");
+    if (isContextInvalidation(response?.error)) {
+      stopContentScript();
+      return null;
+    }
+    return makeLocalGrayResponse(article, response?.error || "extension_unavailable");
   }
 
   function makeLocalGrayResponse(article, reason = "extraction_failed") {
@@ -838,6 +852,18 @@
         });
       }
     });
+  }
+
+  function isContextInvalidation(message) {
+    return /extension context invalidated|context invalidated/i.test(String(message || ""));
+  }
+
+  function stopContentScript() {
+    stopped = true;
+    window.clearTimeout(scanTimer);
+    observer?.disconnect();
+    window.removeEventListener("scroll", queueScan);
+    document.removeEventListener("keydown", closePanelsOnEscape);
   }
 
   function injectStyles() {
