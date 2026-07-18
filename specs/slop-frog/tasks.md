@@ -192,7 +192,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** A demo vote or appeal creates a `verdict_history` row.
 
 - [ ] 14. Document inactive training placeholder (Owner: Person B)
-  - [ ] 14.1 Add future training notes without implementation
+  - [x] 14.1 Add future training notes without implementation
     - Document that backend scraping, rehydration, scheduled jobs, and training are inactive for MVP.
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
     - **Verification:** No code path, cron job, or script attempts to fetch X posts from the backend.

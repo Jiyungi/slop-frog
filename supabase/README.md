@@ -2,6 +2,9 @@
 
 Schema and setup notes for community labels, reviewer reputation, appeals, and verdict history.
 
+The future training pipeline is intentionally inactive for this MVP; see
+[TRAINING_PLACEHOLDER.md](TRAINING_PLACEHOLDER.md).
+
 ## Environment Contract
 
 The extension/community layer expects these values during local development:
