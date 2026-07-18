@@ -509,15 +509,21 @@
     ].forEach(([vote, label]) => {
       choices.append(
         button(label, async () => {
-          await sendMessage({
+          const response = await sendMessage({
             type: "SLOP_FROG_SUBMIT_VOTE",
             payload: {
               contentKey: payload.result.contentKey,
               platform: payload.post?.platform || activeAdapter?.platform || "x",
               vote,
+              post: payload.post,
             },
           });
-          panel.replaceChildren(el("strong", {}, "Saved"));
+          if (!response?.ok) {
+            panel.replaceChildren(el("strong", {}, "Could not save feedback"));
+            return;
+          }
+          updatePanelCommunity(payload, response.communityAggregate);
+          panel.replaceChildren(el("strong", {}, "Saved to community"));
         })
       );
     });
@@ -541,20 +547,36 @@
     ].forEach(([reason, label]) => {
       choices.append(
         button(label, async () => {
-          await sendMessage({
+          const response = await sendMessage({
             type: "SLOP_FROG_SUBMIT_APPEAL",
             payload: {
               contentKey: payload.result.contentKey,
               reason,
               status: "submitted",
+              post: payload.post,
             },
           });
+          if (!response?.ok) {
+            panel.replaceChildren(el("strong", {}, "Could not send appeal"));
+            return;
+          }
+          updatePanelCommunity(payload, response.communityAggregate);
           panel.replaceChildren(el("strong", {}, "Appeal sent"));
         })
       );
     });
     panel.append(choices);
     return panel;
+  }
+
+  function updatePanelCommunity(payload, communityAggregate) {
+    if (!communityAggregate) return;
+    payload.communityAggregate = communityAggregate;
+    payload.result = runtime.composeSlopScore(
+      { ...payload.scoreResponse, contentKey: payload.post?.contentKey || "" },
+      communityAggregate,
+      settings
+    );
   }
 
   function chartBlock(title, points, mode) {
