@@ -6,3 +6,8 @@
 /local-detector/models/
 /local-detector/.venv/
 /local-detector/**/__pycache__/
+
+# The unpacked extension reads this generated local-only configuration. It
+# contains a Supabase publishable key and demo reviewer identity, never a
+# server secret.
+/extension/src/shared/supabase-config.local.json

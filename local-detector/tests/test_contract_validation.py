@@ -54,6 +54,26 @@ class ScoreRequestContractTests(unittest.TestCase):
                 }
             )
 
+    def test_linkedin_post_envelope_is_accepted(self) -> None:
+        request = ScoreRequest.model_validate(
+            {
+                "post": {
+                    "platform": "linkedin",
+                    "contentKey": "linkedin:demo-activity",
+                    "url": "https://www.linkedin.com/feed/update/urn:li:activity:1/",
+                    "authorHandle": "Slop Frog Demo",
+                    "visibleText": "A sufficiently long LinkedIn post for local scoring.",
+                    "normalizedText": "a sufficiently long linkedin post for local scoring.",
+                    "textHash": "linkedin_fixture_hash",
+                    "imageUrls": [],
+                    "extractedAt": "2026-07-18T21:00:00.000Z",
+                },
+                "settings": SETTINGS,
+            }
+        )
+
+        self.assertEqual(request.post.platform, "linkedin")
+
     def test_short_fixture_returns_gray_for_insufficient_evidence(self) -> None:
         fixtures_path = REPOSITORY_ROOT / "extension/src/shared/fixtures.json"
         fixtures = json.loads(fixtures_path.read_text())

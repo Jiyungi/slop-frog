@@ -2,7 +2,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.content_items (
   content_key text primary key,
-  platform text not null check (platform in ('x')),
+  platform text not null check (platform in ('x', 'linkedin')),
   tweet_id text,
   url text,
   text_hash text,
@@ -11,6 +11,14 @@ create table if not exists public.content_items (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- `create table if not exists` does not update a deployed constraint, so keep
+-- the live project aligned when adding LinkedIn to the two supported sources.
+alter table public.content_items
+  drop constraint if exists content_items_platform_check;
+alter table public.content_items
+  add constraint content_items_platform_check
+  check (platform in ('x', 'linkedin'));
 
 create table if not exists public.reviewers (
   reviewer_id text primary key,

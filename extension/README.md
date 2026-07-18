@@ -1,6 +1,8 @@
 # Slop Frog Extension
 
-Chrome extension MVP for labeling X posts while the user scrolls.
+Chrome extension MVP for labeling X and LinkedIn feed posts while the user
+scrolls. These are the only supported sources; it does not scrape a backend or
+support Reddit, Facebook, or other social networks.
 
 Implementation lives under `src/`.
 

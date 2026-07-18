@@ -15,7 +15,7 @@ ModalityStatus = Literal["available", "unsupported", "not_enough_signal", "error
 
 
 class PostEnvelope(ContractModel):
-    platform: Literal["x"]
+    platform: Literal["x", "linkedin"]
     contentKey: str = Field(min_length=1)
     tweetId: str | None = None
     url: str | None = None
