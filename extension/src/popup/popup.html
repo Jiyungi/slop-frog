@@ -11,18 +11,22 @@
       <header class="topbar">
         <div>
           <h1>Slop Frog</h1>
-          <p>X layer</p>
+          <p>Feed filter</p>
         </div>
-        <span class="frog" aria-hidden="true">◖•◗</span>
+        <span class="frog" aria-hidden="true">
+          <i></i>
+          <i></i>
+          <b></b>
+        </span>
       </header>
 
       <section class="status-list" aria-label="Connection status">
         <div class="status-row">
-          <span>Local detector</span>
+          <span>Detector</span>
           <strong id="detectorStatus">Checking</strong>
         </div>
         <div class="status-row">
-          <span>Supabase</span>
+          <span>Community</span>
           <strong id="supabaseStatus">Pending</strong>
         </div>
       </section>
@@ -37,13 +41,6 @@
           <input id="autoFilterRed" type="checkbox" />
         </label>
       </section>
-
-      <label class="url-field">
-        <span>Detector URL</span>
-        <input id="localDetectorUrl" spellcheck="false" />
-      </label>
-
-      <p id="hint" class="hint" role="status"></p>
     </main>
 
     <script src="../shared/runtime.js"></script>

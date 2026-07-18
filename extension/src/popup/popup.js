@@ -2,8 +2,6 @@ const detectorStatus = document.querySelector("#detectorStatus");
 const supabaseStatus = document.querySelector("#supabaseStatus");
 const showNumericScore = document.querySelector("#showNumericScore");
 const autoFilterRed = document.querySelector("#autoFilterRed");
-const localDetectorUrl = document.querySelector("#localDetectorUrl");
-const hint = document.querySelector("#hint");
 
 initPopup();
 
@@ -13,18 +11,12 @@ async function initPopup() {
 
   showNumericScore.checked = Boolean(settings.showNumericScore);
   autoFilterRed.checked = Boolean(settings.autoFilterRed);
-  localDetectorUrl.value = settings.localDetectorUrl;
 
   setStatus(detectorStatus, status.detector);
   setStatus(supabaseStatus, status.supabase);
 
   showNumericScore.addEventListener("change", save);
   autoFilterRed.addEventListener("change", save);
-  localDetectorUrl.addEventListener("change", save);
-
-  hint.textContent = status.detector?.ok
-    ? ""
-    : "Start the detector at localhost:8765";
 }
 
 async function save() {
@@ -33,14 +25,13 @@ async function save() {
     settings: {
       showNumericScore: showNumericScore.checked,
       autoFilterRed: autoFilterRed.checked,
-      localDetectorUrl: localDetectorUrl.value.trim(),
     },
   });
 
-  hint.textContent = response.ok ? "Saved" : "Could not save";
+  document.body.dataset.saved = response.ok ? "true" : "false";
   window.setTimeout(() => {
-    hint.textContent = "";
-  }, 1400);
+    delete document.body.dataset.saved;
+  }, 900);
 }
 
 function setStatus(element, value) {

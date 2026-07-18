@@ -64,6 +64,14 @@ assert(
   "appeal panel sends appeal action"
 );
 assert(
+  contentScript.includes('label: "Scoring"'),
+  "pending detector state shows Scoring, not Gray"
+);
+assert(
+  contentScript.includes("insertBefore(mount, actionGroup)"),
+  "controls render before X action row"
+);
+assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),
   "DOM helper accepts multiple children"
 );
@@ -83,6 +91,10 @@ assert(
 const fixture = fs.readFileSync(path.join(extensionRoot, "dev/x-feed-fixture.html"), "utf8");
 const fixturePosts = fixture.match(/data-testid="tweet"/g) || [];
 assert(fixturePosts.length === 3, "fixture includes three X-style posts");
+
+const popupHtml = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.html"), "utf8");
+assert(!popupHtml.includes("Detector URL"), "popup hides detector URL");
+assert(popupHtml.includes('class="frog"'), "popup includes frog brand mark");
 
 console.log("Person A verification passed");
 

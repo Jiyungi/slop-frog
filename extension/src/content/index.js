@@ -117,9 +117,10 @@
     mount.replaceChildren(
       createControlButton({
         kind: "evidence",
-        label: "Gray",
+        label: "Scoring",
         title: "Scoring",
-        icon: iconFlag(),
+        icon: iconFrog(),
+        tone: "loading",
         onClick: () => {},
       })
     );
@@ -141,7 +142,7 @@
         kind: "evidence",
         label: formatFlagLabel(result),
         title: "View Slop Score evidence",
-        icon: iconFlag(),
+        icon: iconFrog(),
         tone: result.label,
         onClick: () => togglePanel(article, "evidence"),
       }),
@@ -209,7 +210,7 @@
       article.querySelector('[role="group"]');
 
     if (actionGroup?.parentElement) {
-      actionGroup.parentElement.append(mount);
+      actionGroup.parentElement.insertBefore(mount, actionGroup);
     } else {
       article.append(mount);
     }
@@ -475,6 +476,31 @@
     return iconSvg("M5 4v17M6 5h11l-2 4 2 4H6");
   }
 
+  function iconFrog() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-mark");
+    svg.append(
+      svgEl("path", {
+        d: "M6.5 9.5C7.2 6.8 9.1 5.4 12 5.4s4.8 1.4 5.5 4.1c1.6.6 2.7 2 2.7 3.8 0 3.3-3.3 5.5-8.2 5.5s-8.2-2.2-8.2-5.5c0-1.8 1.1-3.2 2.7-3.8Z",
+        fill: "currentColor",
+      }),
+      svgEl("circle", { cx: 8.6, cy: 8.4, r: 2.4, fill: "currentColor" }),
+      svgEl("circle", { cx: 15.4, cy: 8.4, r: 2.4, fill: "currentColor" }),
+      svgEl("circle", { cx: 8.8, cy: 8.5, r: 0.8, fill: "Canvas" }),
+      svgEl("circle", { cx: 15.2, cy: 8.5, r: 0.8, fill: "Canvas" }),
+      svgEl("path", {
+        d: "M9.2 14.4c1.7 1 3.9 1 5.6 0",
+        fill: "none",
+        stroke: "Canvas",
+        "stroke-width": "1.2",
+        "stroke-linecap": "round",
+      })
+    );
+    return svg;
+  }
+
   function iconFeedback() {
     return iconSvg("M4 5h16v10H8l-4 4V5Zm5 5 2 2 4-5");
   }
@@ -514,44 +540,46 @@
       .slop-frog-controls {
         display: inline-flex;
         align-items: center;
+        justify-content: flex-start;
         gap: 4px;
-        margin-left: auto;
-        padding-top: 2px;
-        color: oklch(34% 0.024 155);
+        width: fit-content;
+        margin: 9px 0 1px 0;
+        color: oklch(72% 0.18 150);
       }
 
       .slop-frog-button,
       .slop-frog-panel button,
       .slop-frog-filter-card button {
         appearance: none;
-        border: 1px solid color-mix(in oklch, currentColor 22%, transparent);
-        background: color-mix(in oklch, currentColor 4%, transparent);
-        color: oklch(28% 0.026 155);
+        border: 1px solid color-mix(in oklch, currentColor 24%, transparent);
+        background: color-mix(in oklch, currentColor 10%, transparent);
+        color: oklch(74% 0.17 150);
         border-radius: 999px;
         cursor: pointer;
-        font: 600 11px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        transition: background-color 130ms ease-out, border-color 130ms ease-out, transform 130ms ease-out;
+        font: 650 11px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: -0.01em;
+        transition: background-color 130ms ease-out, border-color 130ms ease-out, color 130ms ease-out, transform 130ms ease-out;
       }
 
       .slop-frog-button {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        min-height: 22px;
-        padding: 3px 7px;
+        min-height: 24px;
+        padding: 4px 8px;
       }
 
       .slop-frog-button svg {
-        width: 13px;
-        height: 13px;
+        width: 14px;
+        height: 14px;
       }
 
       .slop-frog-button.is-feedback,
       .slop-frog-button.is-appeal {
-        width: 23px;
-        min-height: 23px;
+        width: 24px;
+        min-height: 24px;
         justify-content: center;
-        padding: 3px;
+        padding: 4px;
       }
 
       .slop-frog-button:hover,
@@ -573,36 +601,45 @@
       }
 
       .slop-frog-button.is-red {
-        color: oklch(39% 0.14 30);
-        background: oklch(96% 0.028 30);
+        color: oklch(73% 0.19 31);
+        background: color-mix(in oklch, oklch(73% 0.19 31) 16%, transparent);
       }
 
       .slop-frog-button.is-yellow {
-        color: oklch(38% 0.105 72);
-        background: oklch(97% 0.032 78);
+        color: oklch(82% 0.16 82);
+        background: color-mix(in oklch, oklch(82% 0.16 82) 16%, transparent);
       }
 
       .slop-frog-button.is-green {
-        color: oklch(34% 0.095 150);
-        background: oklch(97% 0.025 150);
+        color: oklch(75% 0.18 150);
+        background: color-mix(in oklch, oklch(75% 0.18 150) 17%, transparent);
       }
 
       .slop-frog-button.is-gray {
-        color: oklch(38% 0.012 255);
-        background: oklch(97% 0.004 255);
+        color: oklch(72% 0.018 255);
+        background: color-mix(in oklch, oklch(72% 0.018 255) 13%, transparent);
+      }
+
+      .slop-frog-button.is-loading {
+        color: oklch(80% 0.19 150);
+        background: color-mix(in oklch, oklch(80% 0.19 150) 14%, transparent);
+      }
+
+      .slop-frog-button.is-loading .slop-frog-mark {
+        animation: slop-frog-pulse 900ms ease-in-out infinite;
       }
 
       .slop-frog-panel {
         display: grid;
         gap: 6px;
         max-width: min(392px, calc(100% - 24px));
-        margin: 6px 0 8px auto;
+        margin: 6px auto 8px 0;
         padding: 9px;
         border: 1px solid oklch(86% 0.012 155);
         border-radius: 12px;
-        background: oklch(99% 0.004 155);
-        color: oklch(23% 0.035 155);
-        box-shadow: 0 8px 22px color-mix(in oklch, black 8%, transparent);
+        background: light-dark(oklch(99% 0.004 155), oklch(18% 0.018 155));
+        color: light-dark(oklch(23% 0.035 155), oklch(92% 0.014 155));
+        box-shadow: 0 8px 22px color-mix(in oklch, black 18%, transparent);
         font: 12px/1.3 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -668,7 +705,7 @@
         height: 40px;
         border: 1px solid oklch(89% 0.01 155);
         border-radius: 9px;
-        background: oklch(100% 0 0);
+        background: light-dark(oklch(100% 0 0), oklch(15% 0.015 155));
       }
 
       .slop-frog-chart path,
@@ -723,6 +760,24 @@
         @keyframes slop-frog-panel-in {
           from { opacity: 0; transform: translateY(-3px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slop-frog-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.82; }
+          50% { transform: scale(1.12); opacity: 1; }
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .slop-frog-button,
+        .slop-frog-panel button,
+        .slop-frog-filter-card button {
+          color: oklch(76% 0.17 150);
+          background: color-mix(in oklch, currentColor 12%, transparent);
+        }
+
+        .slop-frog-panel {
+          border-color: oklch(34% 0.025 155);
         }
       }
     `;
