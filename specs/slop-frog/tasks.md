@@ -170,7 +170,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 9.1, 10.1, 12.4_
     - **Verification:** A SQL check confirms required tables exist, or local schema review is completed if Supabase credentials are unavailable.
 
-  - [ ] 12.2 Implement vote insert/upsert helper
+  - [x] 12.2 Implement vote insert/upsert helper
     - Store explicit community votes with content item identity and reviewer weight.
     - _Requirements: 9.2, 9.3, 9.4, 9.6_
     - **Verification:** Submitting a demo vote creates a row in `community_votes`.

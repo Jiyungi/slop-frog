@@ -53,6 +53,110 @@ create table if not exists public.verdict_history (
   created_at timestamptz not null default now()
 );
 
+alter table public.content_items enable row level security;
+alter table public.reviewers enable row level security;
+alter table public.community_votes enable row level security;
+alter table public.appeals enable row level security;
+alter table public.verdict_history enable row level security;
+
+create or replace function public.submit_community_vote(
+  p_content_key text,
+  p_platform text,
+  p_vote text,
+  p_reviewer_id text,
+  p_tweet_id text default null,
+  p_url text default null,
+  p_text_hash text default null,
+  p_text_snapshot text default null,
+  p_author_handle text default null
+)
+returns table (
+  content_key text,
+  reviewer_id text,
+  vote text,
+  reviewer_weight numeric,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  canonical_weight numeric;
+begin
+  if coalesce(trim(p_content_key), '') = '' then
+    raise exception 'content_key is required';
+  end if;
+
+  if coalesce(trim(p_reviewer_id), '') = '' then
+    raise exception 'reviewer_id is required';
+  end if;
+
+  insert into public.content_items (
+    content_key,
+    platform,
+    tweet_id,
+    url,
+    text_hash,
+    text_snapshot,
+    author_handle
+  )
+  values (
+    p_content_key,
+    p_platform,
+    p_tweet_id,
+    p_url,
+    p_text_hash,
+    p_text_snapshot,
+    p_author_handle
+  )
+  on conflict on constraint content_items_pkey do update
+  set
+    tweet_id = coalesce(excluded.tweet_id, content_items.tweet_id),
+    url = coalesce(excluded.url, content_items.url),
+    text_hash = coalesce(excluded.text_hash, content_items.text_hash),
+    text_snapshot = coalesce(excluded.text_snapshot, content_items.text_snapshot),
+    author_handle = coalesce(excluded.author_handle, content_items.author_handle),
+    updated_at = now();
+
+  insert into public.reviewers (reviewer_id)
+  values (p_reviewer_id)
+  on conflict on constraint reviewers_pkey do nothing;
+
+  select reputation_weight
+  into canonical_weight
+  from public.reviewers
+  where reviewers.reviewer_id = p_reviewer_id;
+
+  return query
+  insert into public.community_votes (
+    content_key,
+    reviewer_id,
+    vote,
+    reviewer_weight
+  )
+  values (p_content_key, p_reviewer_id, p_vote, canonical_weight)
+  on conflict on constraint community_votes_content_key_reviewer_id_key do update
+  set
+    vote = excluded.vote,
+    reviewer_weight = excluded.reviewer_weight,
+    created_at = now()
+  returning
+    community_votes.content_key,
+    community_votes.reviewer_id,
+    community_votes.vote,
+    community_votes.reviewer_weight,
+    community_votes.created_at;
+end;
+$$;
+
+revoke all on function public.submit_community_vote(
+  text, text, text, text, text, text, text, text, text
+) from public;
+grant execute on function public.submit_community_vote(
+  text, text, text, text, text, text, text, text, text
+) to anon, authenticated;
+
 create or replace view public.community_aggregates as
 select
   ci.content_key,
