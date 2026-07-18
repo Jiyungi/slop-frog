@@ -613,8 +613,8 @@
     control.append(icon);
     if (label) control.append(el("span", {}, label));
     control.addEventListener("click", guardedEvent((event) => {
-      event.preventDefault();
-      event.stopPropagation();
+      captureUiEvent(event);
+      if (stopped) return;
       onClick();
     }));
     return control;
@@ -628,8 +628,8 @@
     close.setAttribute("aria-label", "Close Slop Frog panel");
     close.textContent = "×";
     close.addEventListener("click", guardedEvent((event) => {
-      event.preventDefault();
-      event.stopPropagation();
+      captureUiEvent(event);
+      if (stopped) return;
       if (panel.isConnected) panel.remove();
     }));
     return close;
@@ -684,8 +684,8 @@
     const element = el("button", {}, label);
     element.type = "button";
     element.addEventListener("click", guardedEvent((event) => {
-      event.preventDefault();
-      event.stopPropagation();
+      captureUiEvent(event);
+      if (stopped) return;
       onClick();
     }));
     return element;
@@ -867,12 +867,25 @@
         handler(event);
       } catch (error) {
         if (isContextInvalidation(error?.message)) {
-          stopContentScript();
+          quietStopContentScript();
           return;
         }
         throw error;
       }
     };
+  }
+
+  function captureUiEvent(event) {
+    try {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+    } catch (error) {
+      if (isContextInvalidation(error?.message)) {
+        quietStopContentScript();
+        return;
+      }
+      throw error;
+    }
   }
 
   function suppressInvalidatedContextError(event) {
@@ -883,15 +896,27 @@
       String(event?.reason || "");
 
     if (!isContextInvalidation(message)) return;
-    event.preventDefault?.();
-    event.stopImmediatePropagation?.();
-    stopContentScript();
+    try {
+      event.preventDefault?.();
+      event.stopImmediatePropagation?.();
+    } catch {
+      // If Chrome invalidated the isolated world, even touching the event can fail.
+    }
+    quietStopContentScript();
   }
 
   function stopContentScript() {
     stopped = true;
     window.clearTimeout(scanTimer);
     observer?.disconnect();
+  }
+
+  function quietStopContentScript() {
+    try {
+      stopContentScript();
+    } catch {
+      stopped = true;
+    }
   }
 
   function injectStyles() {
