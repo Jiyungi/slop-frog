@@ -68,8 +68,9 @@ assert(
   "pending detector state shows Scoring, not Gray"
 );
 assert(
-  contentScript.includes("actionGroup.prepend(mount)"),
-  "controls render at the start of X action row"
+  contentScript.includes('slot.className = "slop-frog-slot"') &&
+    contentScript.includes("article.append(slot)"),
+  "controls render in their own bottom-left slot"
 );
 assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),

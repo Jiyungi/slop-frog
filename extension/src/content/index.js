@@ -199,21 +199,16 @@
     let mount = article.querySelector(":scope .slop-frog-controls");
     if (mount) return mount;
 
+    const slot = document.createElement("div");
+    slot.className = "slop-frog-slot";
+
     mount = document.createElement("div");
     mount.className = "slop-frog-controls";
     mount.setAttribute("role", "group");
     mount.setAttribute("aria-label", "Slop Frog controls");
 
-    const actionGroup =
-      article.querySelector('[data-testid="reply"]')?.closest('[role="group"]') ||
-      article.querySelector('[data-testid="like"]')?.closest('[role="group"]') ||
-      article.querySelector('[role="group"]');
-
-    if (actionGroup) {
-      actionGroup.prepend(mount);
-    } else {
-      article.append(mount);
-    }
+    slot.append(mount);
+    article.append(slot);
 
     return mount;
   }
@@ -559,13 +554,21 @@
         align-self: center;
         gap: 6px;
         width: fit-content;
-        margin: 0 10px 0 0;
+        margin: 0;
         padding: 0;
         border: 0;
         background: transparent;
         box-shadow: none;
         color: var(--sf-green);
         font-family: var(--sf-font);
+      }
+
+      .slop-frog-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+        margin-top: 7px;
       }
 
       .slop-frog-button,
