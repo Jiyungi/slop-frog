@@ -175,7 +175,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 9.2, 9.3, 9.4, 9.6_
     - **Verification:** Submitting a demo vote creates a row in `community_votes`.
 
-  - [ ] 12.3 Implement aggregate fetch helper
+  - [x] 12.3 Implement aggregate fetch helper
     - Return weighted community score for a given `contentKey`.
     - _Requirements: 9.7, 10.4_
     - **Verification:** A voted fixture returns a non-null aggregate score.

@@ -200,3 +200,37 @@ select
 from public.content_items ci
 left join public.community_votes cv on cv.content_key = ci.content_key
 group by ci.content_key, ci.updated_at;
+
+create or replace function public.get_community_aggregate(p_content_key text)
+returns table (
+  content_key text,
+  vote_count integer,
+  weighted_ai_score numeric,
+  looks_ai_weight numeric,
+  looks_human_weight numeric,
+  unsure_weight numeric,
+  appeal_status text,
+  latest_verdict_label text,
+  updated_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    aggregates.content_key,
+    aggregates.vote_count,
+    aggregates.weighted_ai_score,
+    aggregates.looks_ai_weight,
+    aggregates.looks_human_weight,
+    aggregates.unsure_weight,
+    aggregates.appeal_status,
+    aggregates.latest_verdict_label,
+    aggregates.updated_at
+  from public.community_aggregates as aggregates
+  where aggregates.content_key = p_content_key;
+$$;
+
+revoke all on function public.get_community_aggregate(text) from public;
+grant execute on function public.get_community_aggregate(text) to anon, authenticated;

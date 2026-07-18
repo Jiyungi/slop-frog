@@ -54,3 +54,57 @@ export async function submitCommunityVote(config, vote, fetchImpl = globalThis.f
     createdAt: savedVote.created_at,
   };
 }
+
+export async function fetchCommunityAggregate(
+  config,
+  contentKey,
+  fetchImpl = globalThis.fetch
+) {
+  if (!isSupabaseConfigured(config)) {
+    throw new Error("Supabase is not configured for this extension.");
+  }
+
+  if (!contentKey) {
+    throw new Error("A content key is required to fetch a community aggregate.");
+  }
+
+  const response = await fetchImpl(
+    `${String(config.url).replace(/\/+$/, "")}/rest/v1/rpc/get_community_aggregate`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_content_key: contentKey }),
+    }
+  );
+
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      body?.message || `Supabase aggregate request failed (HTTP ${response.status}).`
+    );
+  }
+
+  if (!Array.isArray(body) || body.length > 1) {
+    throw new Error("Supabase returned an invalid community aggregate response.");
+  }
+
+  if (body.length === 0) return null;
+
+  const aggregate = body[0];
+  return {
+    contentKey: aggregate.content_key,
+    voteCount: Number(aggregate.vote_count),
+    weightedAiScore:
+      aggregate.weighted_ai_score === null ? null : Number(aggregate.weighted_ai_score),
+    looksAiWeight: Number(aggregate.looks_ai_weight),
+    looksHumanWeight: Number(aggregate.looks_human_weight),
+    unsureWeight: Number(aggregate.unsure_weight),
+    appealStatus: aggregate.appeal_status,
+    latestVerdictLabel: aggregate.latest_verdict_label,
+    updatedAt: aggregate.updated_at,
+  };
+}

@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { submitCommunityVote } from "../../extension/src/shared/supabase.mjs";
+import {
+  fetchCommunityAggregate,
+  submitCommunityVote,
+} from "../../extension/src/shared/supabase.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const env = readEnv(path.join(repositoryRoot, ".env"));
@@ -31,6 +34,12 @@ const savedVote = await submitCommunityVote(
   }
 );
 
+const config = {
+  url: env.SLOP_FROG_SUPABASE_URL,
+  publishableKey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+};
+const aggregate = await fetchCommunityAggregate(config, fixture.post.contentKey);
+
 if (
   savedVote.contentKey !== fixture.post.contentKey ||
   savedVote.vote !== "looks_ai" ||
@@ -39,8 +48,17 @@ if (
   throw new Error("The saved vote did not match the demo request.");
 }
 
+if (
+  !aggregate ||
+  aggregate.contentKey !== fixture.post.contentKey ||
+  aggregate.voteCount < 1 ||
+  aggregate.weightedAiScore !== 100
+) {
+  throw new Error("The weighted community aggregate did not reflect the demo vote.");
+}
+
 console.log(
-  `Vote upsert verified for ${savedVote.contentKey}: ${savedVote.vote} at weight ${savedVote.reviewerWeight}.`
+  `Vote and aggregate verified for ${savedVote.contentKey}: ${savedVote.vote} at weight ${savedVote.reviewerWeight}, weighted AI score ${aggregate.weightedAiScore}.`
 );
 
 function readEnv(envPath) {
