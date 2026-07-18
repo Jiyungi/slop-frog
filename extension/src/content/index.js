@@ -209,8 +209,8 @@
       article.querySelector('[data-testid="like"]')?.closest('[role="group"]') ||
       article.querySelector('[role="group"]');
 
-    if (actionGroup?.parentElement) {
-      actionGroup.parentElement.after(mount);
+    if (actionGroup) {
+      actionGroup.prepend(mount);
     } else {
       article.append(mount);
     }
@@ -559,7 +559,7 @@
         align-self: center;
         gap: 6px;
         width: fit-content;
-        margin: 7px 0 2px 0;
+        margin: 0 10px 0 0;
         padding: 0;
         border: 0;
         background: transparent;

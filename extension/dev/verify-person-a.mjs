@@ -68,8 +68,8 @@ assert(
   "pending detector state shows Scoring, not Gray"
 );
 assert(
-  contentScript.includes("actionGroup.parentElement.after(mount)"),
-  "controls render after X action row"
+  contentScript.includes("actionGroup.prepend(mount)"),
+  "controls render at the start of X action row"
 );
 assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),
