@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -8,8 +10,20 @@ from scorer import LocalDetectorScorer
 SERVICE_NAME = "slop-frog-local-detector"
 SERVICE_VERSION = "0.1.0"
 
-app = FastAPI(title="Slop Frog Local Detector", version=SERVICE_VERSION)
 scorer = LocalDetectorScorer()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Initialize the local model once so score requests stay under demo latency."""
+
+    scorer.load_model()
+    yield
+
+
+app = FastAPI(
+    title="Slop Frog Local Detector", version=SERVICE_VERSION, lifespan=lifespan
+)
 
 
 @app.exception_handler(RequestValidationError)

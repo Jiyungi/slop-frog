@@ -55,6 +55,32 @@ class ScoreRequestContractTests(unittest.TestCase):
         self.assertLess(result.evidenceCoverage, SETTINGS["evidenceCoverageMinimum"])
         self.assertIn("not_enough_signal", result.reasons)
 
+    def test_detector_label_thresholds_match_the_shared_contract(self) -> None:
+        self.assertEqual(
+            LocalDetectorScorer.label_for_score(
+                75, SETTINGS["redThreshold"], SETTINGS["yellowThreshold"]
+            ),
+            "yellow",
+        )
+        self.assertEqual(
+            LocalDetectorScorer.label_for_score(
+                40, SETTINGS["redThreshold"], SETTINGS["yellowThreshold"]
+            ),
+            "yellow",
+        )
+        self.assertEqual(
+            LocalDetectorScorer.label_for_score(
+                39.9, SETTINGS["redThreshold"], SETTINGS["yellowThreshold"]
+            ),
+            "green",
+        )
+        self.assertEqual(
+            LocalDetectorScorer.label_for_score(
+                75.1, SETTINGS["redThreshold"], SETTINGS["yellowThreshold"]
+            ),
+            "red",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

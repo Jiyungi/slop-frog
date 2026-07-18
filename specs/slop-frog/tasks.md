@@ -154,7 +154,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
     - **Verification:** Short fixture returns gray with reason `not_enough_signal`.
 
-  - [ ] 11.2 Implement detector score path
+  - [x] 11.2 Implement detector score path
     - Integrate a local Bouncer-inspired detector if feasible; otherwise implement deterministic heuristic fallback for demo.
     - _Requirements: 4.4, 4.5, 4.8_
     - **Verification:** Medium and high-risk fixtures return stable numeric detector scores within 0 to 100.

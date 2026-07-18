@@ -4,7 +4,7 @@ Local laptop inference service for the Chrome extension.
 
 The MVP service listens on `http://localhost:8765`.
 
-## Run the scaffold
+## Run on an Apple Silicon Mac
 
 From this directory:
 
@@ -14,14 +14,21 @@ python3 -m venv .venv
 .venv/bin/uvicorn app:app --host 127.0.0.1 --port 8765
 ```
 
+Startup loads the pinned local Qwen3-4B base model plus Imbue detector adapter
+from `models/imbue/`; it never downloads model weights at runtime. The service
+uses PyTorch MPS with bfloat16 because float16 produces non-finite Qwen logits
+on this runtime. See [MODELS.md](MODELS.md) for the exact revisions and license.
+
 Verify it in another terminal:
 
 ```sh
 curl http://localhost:8765/health
 ```
 
-The initial scaffold exposes health only. Request validation and local scoring
-are implemented in subsequent Person B subtasks.
+`GET /health` reports `model_loaded: true` once the local model is ready. A
+valid `POST /score` request with at least 20 words receives the Imbue Qwen
+four-bucket expected-value score converted to the shared 0–100 scale. Shorter
+text remains gray with `not_enough_signal`.
 
 ## Shared constants
 
