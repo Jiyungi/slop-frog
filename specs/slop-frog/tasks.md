@@ -138,7 +138,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** Mock volume history renders a visible chart inside the evidence panel.
 
 - [ ] 10. Build local detector service scaffold (Owner: Person B)
-  - [ ] 10.1 Create FastAPI service
+  - [x] 10.1 Create FastAPI service
     - Implement `local-detector/app.py`, `schemas.py`, `scorer.py`, and `requirements.txt`.
     - _Requirements: 4.1, 4.2, 4.3_
     - **Verification:** `GET /health` returns ok on `http://localhost:8765/health`.
