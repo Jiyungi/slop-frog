@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from schemas import ErrorResponse, HealthResponse, ScoreRequest
+from schemas import ErrorResponse, HealthResponse, ScoreRequest, ScoreResponse
 from scorer import LocalDetectorScorer
 
 SERVICE_NAME = "slop-frog-local-detector"
@@ -37,11 +37,11 @@ def health() -> HealthResponse:
     )
 
 
-@app.post("/score", response_model=ErrorResponse, status_code=503)
-def score(_: ScoreRequest) -> ErrorResponse:
-    """Validate requests before the local scorer is connected in task 11."""
+@app.post("/score", response_model=ScoreResponse | ErrorResponse)
+def score(request: ScoreRequest) -> ScoreResponse | JSONResponse:
+    """Return a gray result before model inference when evidence is too sparse."""
 
-    return ErrorResponse(
-        errorCode="model_unavailable",
-        message="The local detector model has not been initialized yet.",
-    )
+    result = scorer.score(request)
+    if isinstance(result, ErrorResponse):
+        return JSONResponse(status_code=503, content=result.model_dump(mode="json"))
+    return result

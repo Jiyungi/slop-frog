@@ -9,7 +9,8 @@ DETECTOR_DIR = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = DETECTOR_DIR.parent
 sys.path.insert(0, str(DETECTOR_DIR))
 
-from schemas import ScoreRequest  # noqa: E402
+from schemas import ScoreRequest, ScoreResponse  # noqa: E402
+from scorer import LocalDetectorScorer  # noqa: E402
 
 
 SETTINGS = {
@@ -38,6 +39,21 @@ class ScoreRequestContractTests(unittest.TestCase):
                     "settings": SETTINGS,
                 }
             )
+
+    def test_short_fixture_returns_gray_for_insufficient_evidence(self) -> None:
+        fixtures_path = REPOSITORY_ROOT / "extension/src/shared/fixtures.json"
+        fixtures = json.loads(fixtures_path.read_text())
+        short_fixture = next(fixture for fixture in fixtures if fixture["name"] == "short-gray")
+        request = ScoreRequest.model_validate(
+            {"post": short_fixture["post"], "settings": SETTINGS}
+        )
+
+        result = LocalDetectorScorer().score(request)
+
+        self.assertIsInstance(result, ScoreResponse)
+        self.assertEqual(result.labelRecommendation, "gray")
+        self.assertLess(result.evidenceCoverage, SETTINGS["evidenceCoverageMinimum"])
+        self.assertIn("not_enough_signal", result.reasons)
 
 
 if __name__ == "__main__":

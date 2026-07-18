@@ -149,7 +149,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** Valid fixture requests pass; malformed requests return typed errors.
 
 - [ ] 11. Implement local scoring logic (Owner: Person B)
-  - [ ] 11.1 Implement evidence coverage
+  - [x] 11.1 Implement evidence coverage
     - Apply text-length coverage and return gray for too little usable signal.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
     - **Verification:** Short fixture returns gray with reason `not_enough_signal`.
