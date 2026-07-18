@@ -726,9 +726,17 @@
         min-height: 29px;
         justify-content: center;
         padding: 0;
-        color: oklch(82% 0.14 151);
         background:
           linear-gradient(180deg, oklch(21% 0.04 154), oklch(14.5% 0.026 154));
+      }
+
+      .slop-frog-button.is-feedback,
+      .slop-frog-button.is-appeal {
+        color: oklch(96% 0.012 154);
+      }
+
+      .slop-frog-button.is-evidence {
+        color: oklch(72% 0.018 255);
       }
 
       .slop-frog-button:hover,
