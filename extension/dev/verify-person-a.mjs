@@ -69,8 +69,9 @@ assert(
 );
 assert(
   contentScript.includes('slot.className = "slop-frog-slot"') &&
-    contentScript.includes("article.append(slot)"),
-  "controls render in their own bottom-left slot"
+    contentScript.includes("findOuterActionGroup(article)") &&
+    contentScript.includes('actionGroup.insertAdjacentElement("afterend", slot)'),
+  "controls render after outer X action row"
 );
 assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),

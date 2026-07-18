@@ -207,10 +207,29 @@
     mount.setAttribute("role", "group");
     mount.setAttribute("aria-label", "Slop Frog controls");
 
+    const actionGroup = findOuterActionGroup(article);
     slot.append(mount);
-    article.append(slot);
+
+    if (actionGroup) {
+      actionGroup.insertAdjacentElement("afterend", slot);
+    } else {
+      const contentColumn =
+        article.querySelector('[data-testid="tweetText"]')?.closest("div")?.parentElement ||
+        article;
+      contentColumn.append(slot);
+    }
 
     return mount;
+  }
+
+  function findOuterActionGroup(article) {
+    const groups = Array.from(article.querySelectorAll('[role="group"]')).filter(
+      (group) =>
+        group.querySelector(
+          '[data-testid="reply"], [data-testid="retweet"], [data-testid="like"]'
+        )
+    );
+    return groups.at(-1) || null;
   }
 
   function togglePanel(article, kind) {
@@ -568,7 +587,13 @@
         flex-direction: column;
         align-items: flex-start;
         width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+        flex: 0 0 100%;
+        grid-column: 1 / -1;
+        justify-self: stretch;
         margin-top: 7px;
+        text-align: left;
       }
 
       .slop-frog-button,
