@@ -9,11 +9,6 @@
     "https://twitter.com/*",
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
-    "https://www.reddit.com/*",
-    "https://reddit.com/*",
-    "https://old.reddit.com/*",
-    "https://www.facebook.com/*",
-    "https://facebook.com/*",
     "http://localhost:8765/*",
     "https://*.supabase.co/*"
   ],
@@ -27,12 +22,7 @@
         "https://x.com/*",
         "https://twitter.com/*",
         "https://www.linkedin.com/*",
-        "https://linkedin.com/*",
-        "https://www.reddit.com/*",
-        "https://reddit.com/*",
-        "https://old.reddit.com/*",
-        "https://www.facebook.com/*",
-        "https://facebook.com/*"
+        "https://linkedin.com/*"
       ],
       "js": ["src/shared/runtime.js", "src/content/index.js"],
       "run_at": "document_idle"

@@ -7,9 +7,13 @@ const manifest = readJson("manifest.json");
 
 assert(manifest.manifest_version === 3, "manifest is MV3");
 assert(!JSON.stringify(manifest).includes("<all_urls>"), "manifest avoids all_urls");
-for (const host of ["linkedin.com", "reddit.com", "facebook.com"]) {
+for (const host of ["linkedin.com"]) {
   assert(JSON.stringify(manifest.host_permissions).includes(host), `manifest permits ${host}`);
   assert(JSON.stringify(manifest.content_scripts).includes(host), `content script matches ${host}`);
+}
+for (const host of ["reddit.com", "facebook.com"]) {
+  assert(!JSON.stringify(manifest.host_permissions).includes(host), `manifest excludes ${host}`);
+  assert(!JSON.stringify(manifest.content_scripts).includes(host), `content script excludes ${host}`);
 }
 
 const manifestRefs = [
@@ -61,9 +65,15 @@ assert(
 );
 assert(
   contentScript.includes('platform: "linkedin"') &&
-    contentScript.includes('platform: "reddit"') &&
-    contentScript.includes('platform: "facebook"'),
-  "content script includes LinkedIn, Reddit, and Facebook adapters"
+    !contentScript.includes('platform: "reddit"') &&
+    !contentScript.includes('platform: "facebook"'),
+  "content script is focused on X and LinkedIn adapters"
+);
+assert(
+  contentScript.includes("findLinkedInPosts") &&
+    contentScript.includes("getLinkedInText") &&
+    contentScript.includes(".feed-shared-update-v2"),
+  "LinkedIn adapter uses robust feed-card detection"
 );
 assert(
   contentScript.includes('"SLOP_FROG_SUBMIT_VOTE"'),

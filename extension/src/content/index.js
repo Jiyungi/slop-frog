@@ -73,52 +73,17 @@
       platform: "linkedin",
       hostnames: ["linkedin.com"],
       findPosts(root) {
-        return uniqueTopLevel(
-          root.querySelectorAll(
-            '.feed-shared-update-v2, .occludable-update, [data-urn*="urn:li:activity"]'
-          )
-        ).filter((post) => getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS).length > 12);
+        return findLinkedInPosts(root);
       },
       extract: extractLinkedInPost,
       findInsertionPoint(post) {
         return (
           post.querySelector(".feed-shared-social-action-bar") ||
+          post.querySelector(".social-actions") ||
+          post.querySelector('[aria-label*="React"]')?.closest('[role="group"]') ||
+          post.querySelector('[aria-label*="Like"]')?.closest('[role="group"]') ||
           post.querySelector(".social-details-social-counts") ||
           post
-        );
-      },
-    },
-    {
-      platform: "reddit",
-      hostnames: ["reddit.com"],
-      findPosts(root) {
-        return uniqueTopLevel(
-          root.querySelectorAll('shreddit-post, article, [data-testid="post-container"]')
-        ).filter((post) => getRedditText(post).length > 8);
-      },
-      extract: extractRedditPost,
-      findInsertionPoint(post) {
-        return (
-          post.querySelector('[slot="post-media-container"]')?.parentElement ||
-          post.querySelector('[data-testid="post-container"]') ||
-          post
-        );
-      },
-    },
-    {
-      platform: "facebook",
-      hostnames: ["facebook.com"],
-      findPosts(root) {
-        return uniqueTopLevel(
-          root.querySelectorAll('[role="article"], [data-pagelet^="FeedUnit_"]')
-        ).filter((post) => getFacebookText(post).length > 12);
-      },
-      extract: extractFacebookPost,
-      findInsertionPoint(post) {
-        return (
-          Array.from(post.querySelectorAll('[role="button"]'))
-            .find((button) => /Like|Comment|Share/i.test(button.innerText || ""))
-            ?.closest('[role="group"]') || post
         );
       },
     },
@@ -126,8 +91,12 @@
 
   const LINKEDIN_TEXT_SELECTORS = [
     ".update-components-text",
+    ".feed-shared-inline-show-more-text",
+    ".feed-shared-text",
+    ".break-words",
     ".feed-shared-update-v2__description-wrapper",
     '[data-test-id="main-feed-activity-card__commentary"]',
+    '[data-test-id="feed-shared-update-v2__commentary"]',
     '[dir="ltr"]',
   ];
 
@@ -182,9 +151,15 @@
   }
 
   function extractLinkedInPost(post) {
-    const url = firstHref(post, ['a[href*="/feed/update/"]', 'a[href*="activity:"]']);
+    const url = firstHref(post, [
+      'a[href*="/feed/update/"]',
+      'a[href*="activity:"]',
+      'a[href*="urn:li:activity"]',
+    ]);
     const id =
       post.getAttribute("data-urn")?.split(":").pop() ||
+      post.getAttribute("data-id")?.split(":").pop() ||
+      post.getAttribute("data-activity-urn")?.split(":").pop() ||
       url?.match(/activity[:/-](\d+)/)?.[1];
 
     return {
@@ -195,48 +170,8 @@
         ".feed-shared-actor__name",
         ".update-components-actor__title",
       ]),
-      visibleText: getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS),
+      visibleText: getLinkedInText(post),
       imageUrls: imageUrlsFrom(post, 'img[src]:not([src*="profile-displayphoto"])'),
-    };
-  }
-
-  function extractRedditPost(post) {
-    const url = firstHref(post, ['a[href*="/comments/"]', 'a[slot="full-post-link"]']);
-    const id =
-      post.getAttribute("id") ||
-      post.getAttribute("post-id") ||
-      url?.match(/comments\/([^/]+)/)?.[1];
-
-    return {
-      id,
-      url,
-      authorHandle:
-        post.getAttribute("author") ||
-        getTextFromSelectors(post, ['[slot="authorName"]', 'a[href^="/user/"]']),
-      visibleText: getRedditText(post),
-      imageUrls: imageUrlsFrom(post),
-    };
-  }
-
-  function extractFacebookPost(post) {
-    const url = firstHref(post, [
-      'a[href*="/posts/"]',
-      'a[href*="/permalink/"]',
-      'a[href*="story_fbid="]',
-    ]);
-    const id = url?.match(/(?:posts\/|story_fbid=|permalink\/)([^/?&]+)/)?.[1];
-
-    return {
-      id,
-      url,
-      authorHandle: getTextFromSelectors(post, [
-        'h2 strong',
-        'h3 strong',
-        'strong a[role="link"]',
-        'span[dir="auto"] strong',
-      ]),
-      visibleText: getFacebookText(post),
-      imageUrls: imageUrlsFrom(post),
     };
   }
 
@@ -272,28 +207,50 @@
     return handleText?.trim();
   }
 
-  function getRedditText(post) {
-    return getTextFromSelectors(post, [
-      '[slot="title"]',
-      '[slot="text-body"]',
-      '[data-testid="post-title"]',
-      "h1",
-      "h2",
-      "h3",
-      "p",
-    ]);
+  function findLinkedInPosts(root) {
+    const direct = Array.from(
+      root.querySelectorAll(
+        [
+          ".feed-shared-update-v2",
+          ".occludable-update",
+          '[data-urn*="urn:li:activity"]',
+          '[data-id*="urn:li:activity"]',
+          "[data-activity-urn]",
+        ].join(", ")
+      )
+    );
+    const fromText = Array.from(root.querySelectorAll(LINKEDIN_TEXT_SELECTORS.join(", ")))
+      .map((node) =>
+        node.closest(
+          '.feed-shared-update-v2, .occludable-update, [data-urn*="urn:li:activity"], [data-id*="urn:li:activity"], [data-activity-urn], article'
+        )
+      )
+      .filter(Boolean);
+
+    return uniqueTopLevel([...direct, ...fromText]).filter((post) => {
+      const text = getLinkedInText(post);
+      return text.length > 8 || imageUrlsFrom(post).length > 0;
+    });
   }
 
-  function getFacebookText(post) {
-    const text = getTextFromSelectors(post, [
-      '[data-ad-preview="message"]',
-      '[dir="auto"]',
-      'div[style*="text-align"]',
-    ]);
-    return text
+  function getLinkedInText(post) {
+    const selectedText = getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS);
+    if (selectedText.length > 0) return cleanLinkedInText(selectedText);
+    return cleanLinkedInText(post.innerText || post.textContent || "");
+  }
+
+  function cleanLinkedInText(text) {
+    return String(text || "")
       .split("\n")
-      .filter((line) => !/^(Like|Comment|Share|Follow|Suggested for you)$/i.test(line.trim()))
-      .slice(0, 8)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter(
+        (line) =>
+          !/^(Like|Comment|Repost|Send|Follow|Connect|Promoted|Suggested|Show more|See translation)$/i.test(
+            line
+          )
+      )
+      .slice(0, 10)
       .join("\n");
   }
 
