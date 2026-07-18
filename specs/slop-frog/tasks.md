@@ -191,11 +191,26 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 12.4, 12.5, 12.7_
     - **Verification:** A demo vote or appeal creates a `verdict_history` row.
 
-- [ ] 14. Document inactive training placeholder (Owner: Person B)
-  - [ ] 14.1 Add future training notes without implementation
-    - Document that backend scraping, rehydration, scheduled jobs, and training are inactive for MVP.
-    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
-    - **Verification:** No code path, cron job, or script attempts to fetch X posts from the backend.
+- [x] 14. Set up offline training-data preparation (Owner: Person B)
+  - [x] 14.1 Add training-data Supabase schema
+    - Add privacy-safe tables/views for label candidates, cleaned examples, dataset exports, access requests, and public-safe dataset reads.
+    - _Requirements: 15.1, 15.5, 15.7_
+    - **Verification:** `supabase/training_schema.sql` defines the required tables/views and constrains public rows to `pii_status = clean`.
+
+  - [x] 14.2 Add authorized X post rehydration script
+    - Add a local script that fetches actual X post text by post ID using `X_BEARER_TOKEN`.
+    - _Requirements: 15.2, 15.3_
+    - **Verification:** Script requires an explicit bearer token and has no browser scraping path.
+
+  - [x] 14.3 Add PII redaction and blocking logic
+    - Redact direct identifiers and block rows with residual identity risk.
+    - _Requirements: 15.5, 15.6_
+    - **Verification:** `node training-data/dev/verify-training-data.mjs` confirms direct identifiers are redacted and risky examples are blocked.
+
+  - [x] 14.4 Add public dataset export script
+    - Export only cleaned fields and a manifest; exclude raw post IDs, URLs, handles, and source hashes.
+    - _Requirements: 15.5, 15.7_
+    - **Verification:** `node training-data/dev/verify-training-data.mjs` confirms public export excludes source hashes and direct PII patterns.
 
 - [ ] 15. Integrate extension with local detector (Owner: Integrator)
   - [ ] 15.1 Run end-to-end local scoring

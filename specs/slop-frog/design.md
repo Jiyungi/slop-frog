@@ -14,7 +14,7 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 4. **Simple visible labels.** Users see red, yellow, green, or gray while scrolling. Details live in the evidence panel.
 5. **Gray is not green.** Gray means there is not enough signal or the system failed to score. Green means enough signal and low AI evidence.
 6. **Supabase is the community memory.** Supabase stores votes, reviewer weights, appeals, aggregate labels, hashes, and verdict history. Raw media is not stored.
-7. **No hidden training pipeline.** Future training architecture is documented, but disabled in the MVP.
+7. **No hidden training job.** Training-data preparation can exist as an explicit offline operator workflow, but the extension/backend must not silently scrape, rehydrate, or train in the background.
 8. **Verified tasks only.** A task is complete only after its verification step has passed.
 9. **Quiet UI, low text.** UI must use Impeccable guidance and avoid unnecessary explanatory copy. Buttons should be icon-first with short labels/tooltips, like a social media app. Evidence, feedback, and appeals must be separate focused surfaces.
 
@@ -438,20 +438,34 @@ looks_human = 0
 weightedAiScore = sum(vote_score * reviewer_weight) / sum(reviewer_weight)
 ```
 
-## Training Pipeline Placeholder
+## Offline Training Data Preparation
 
-The architecture reserves a future backend job:
+The architecture now supports an explicit offline training-data preparation workflow:
 
 ```mermaid
 graph LR
-    Labels[Supabase labels] --> Select[Quality filter]
-    Select --> Dataset[Training dataset]
-    Dataset --> Train[Detector training]
-    Train --> Eval[Evaluation]
-    Eval --> Release[New local model package]
+    Labels[Supabase labels] --> Queue[Training ingest candidates]
+    Queue --> Fetch[Authorized X post fetch]
+    Fetch --> Clean[PII cleaner + risk gate]
+    Clean --> Dataset[Clean training examples]
+    Dataset --> Export[Public-safe dataset export]
+    Dataset --> Train[Future detector training]
 ```
 
-For the MVP, this entire lane is inactive. No backend job fetches X posts. No scheduled training runs. No automatic media collection. The only data written is data created by explicit user labeling or appeal actions.
+This is not an automatic backend job. No scheduled job fetches X posts. No browser scraping or access-control bypass is part of the design. An operator may run a local authorized X API fetcher against post IDs that already received community labels. The local fetcher writes temporary raw text to `.local/`, then the cleaner creates the only durable training artifact.
+
+The training-data Supabase layer lives in `supabase/training_schema.sql`:
+
+- `training_label_queue`: candidate post IDs and label statistics;
+- `training_clean_examples`: cleaned, deduplicated examples with hashed source identifiers;
+- `training_dataset_exports`: manifests for released dataset snapshots;
+- `training_data_access_requests`: requests for access to a public-safe dataset export;
+- `training_ingest_candidates`: view selecting strong community-label candidates;
+- `public_training_dataset`: view exposing only rows marked `is_public = true` and `pii_status = clean`.
+
+The cleaned dataset must not contain raw post URLs, raw tweet IDs, author handles, author IDs, profile fields, emails, phone numbers, addresses, payment numbers, or raw media files. The cleaner redacts direct identifiers and blocks rows that still look risky. Public export scripts remove source hashes as an extra precaution, keeping only `content_fingerprint`, cleaned text, label fields, vote quality fields, score fields, and redaction metadata.
+
+Future detector training can consume `training_clean_examples` or an exported JSONL file, but training itself remains out of scope for the current branch.
 
 ## Testing Strategy
 

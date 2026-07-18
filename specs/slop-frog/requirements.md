@@ -230,17 +230,19 @@ Three rules are non-negotiable and shape every requirement below:
 5. IF the local detector is not running, THEN THE extension SHALL show a clear local-setup error rather than silently failing.
 6. THE README SHALL explain that the MVP requires running a local detector service before using the extension.
 
-### Requirement 15: Future training pipeline placeholder
+### Requirement 15: Offline training data preparation
 
-**User Story:** As the product team, we want the architecture to support future model improvement, so that community labels can later improve the detector without building that pipeline now.
+**User Story:** As the product team, we want community labels to become a privacy-safe future training dataset, so that the detector can improve without publishing PII or running hidden scraping jobs.
 
 #### Acceptance Criteria
 
-1. THE design SHALL include a Training_Pipeline_Placeholder.
-2. THE Training_Pipeline_Placeholder SHALL be marked inactive for the MVP.
-3. THE MVP SHALL NOT automatically scrape, rehydrate, or collect X posts from the backend.
-4. THE MVP SHALL NOT run scheduled training jobs.
-5. THE MVP SHALL store enough labeled metadata to make future dataset building possible, subject to platform terms and user consent.
+1. THE system SHALL store enough labeled metadata to make future dataset building possible, subject to platform terms and user consent.
+2. THE system SHALL include an explicit offline workflow for authorized X post rehydration from labeled post IDs.
+3. THE system SHALL NOT automatically scrape, rehydrate, or collect X posts from the backend.
+4. THE system SHALL NOT run scheduled training jobs.
+5. THE cleaned training dataset SHALL NOT include raw post URLs, raw tweet IDs, author handles, author IDs, profile fields, emails, phone numbers, addresses, payment numbers, or raw media files.
+6. THE cleaner SHALL redact direct identifiers and block examples that still appear risky after redaction.
+7. THE public dataset export SHALL include only cleaned rows with `pii_status = clean`.
 
 ### Requirement 16: Demo readiness
 
@@ -258,9 +260,9 @@ Three rules are non-negotiable and shape every requirement below:
 
 ## Out of Scope for MVP
 
-1. LinkedIn support.
+1. Platforms beyond X/Twitter and LinkedIn.
 2. Hosted inference.
-3. Backend X scraping or rehydration.
+3. Automatic backend X scraping or rehydration.
 4. Scheduled training jobs.
 5. Raw image, audio, or video storage in Supabase.
 6. Production anti-brigading.
