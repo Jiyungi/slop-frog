@@ -199,6 +199,8 @@
     let mount = article.querySelector(":scope .slop-frog-controls");
     if (mount) return mount;
 
+    article.classList.add("slop-frog-anchored");
+
     const slot = document.createElement("div");
     slot.className = "slop-frog-slot";
 
@@ -207,29 +209,10 @@
     mount.setAttribute("role", "group");
     mount.setAttribute("aria-label", "Slop Frog controls");
 
-    const actionGroup = findOuterActionGroup(article);
     slot.append(mount);
-
-    if (actionGroup) {
-      actionGroup.insertAdjacentElement("afterend", slot);
-    } else {
-      const contentColumn =
-        article.querySelector('[data-testid="tweetText"]')?.closest("div")?.parentElement ||
-        article;
-      contentColumn.append(slot);
-    }
+    article.append(slot);
 
     return mount;
-  }
-
-  function findOuterActionGroup(article) {
-    const groups = Array.from(article.querySelectorAll('[role="group"]')).filter(
-      (group) =>
-        group.querySelector(
-          '[data-testid="reply"], [data-testid="retweet"], [data-testid="like"]'
-        )
-    );
-    return groups.at(-1) || null;
   }
 
   function togglePanel(article, kind) {
@@ -582,18 +565,30 @@
         font-family: var(--sf-font);
       }
 
+      article.slop-frog-anchored {
+        position: relative !important;
+        padding-bottom: 38px !important;
+      }
+
       .slop-frog-slot {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        width: 100%;
-        min-width: 100%;
-        max-width: 100%;
-        flex: 0 0 100%;
-        grid-column: 1 / -1;
-        justify-self: stretch;
-        margin-top: 7px;
+        position: absolute;
+        left: 58px;
+        bottom: 9px;
+        z-index: 2;
+        width: fit-content;
+        min-width: 0;
+        max-width: calc(100% - 74px);
+        margin: 0;
         text-align: left;
+        pointer-events: none;
+      }
+
+      .slop-frog-slot .slop-frog-controls,
+      .slop-frog-slot .slop-frog-panel {
+        pointer-events: auto;
       }
 
       .slop-frog-button,
