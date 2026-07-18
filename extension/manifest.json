@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Slop Frog",
+  "description": "Local-first AI-content flags for X.",
+  "version": "0.1.0",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "http://localhost:8765/*",
+    "https://*.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "src/background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["src/content/index.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Slop Frog",
+    "default_popup": "src/popup/popup.html"
+  }
+}
