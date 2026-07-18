@@ -96,6 +96,10 @@ const popupHtml = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.html
 assert(!popupHtml.includes("Detector URL"), "popup hides detector URL");
 assert(popupHtml.includes('class="frog"'), "popup includes frog brand mark");
 
+const popupCss = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.css"), "utf8");
+assert(popupCss.includes("ui-rounded"), "popup uses rounded legible system font");
+assert(contentScript.includes("ui-rounded"), "feed UI uses rounded legible system font");
+
 console.log("Person A verification passed");
 
 function readJson(relativePath) {
