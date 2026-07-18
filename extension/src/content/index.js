@@ -96,10 +96,15 @@
   }
 
   function getAuthorHandle(article, statusAnchor) {
-    const handleFromStatus = statusAnchor
-      ? new URL(statusAnchor, window.location.origin).pathname.split("/")[1]
+    const handleFromStatus = statusAnchor?.match(/x\.com\/([^/]+)\/status\//)?.[1];
+    if (handleFromStatus && handleFromStatus !== "i") return `@${handleFromStatus}`;
+
+    const relativeHandle = statusAnchor
+      ? new URL(statusAnchor, window.location.origin).pathname.match(
+          /^\/([^/]+)\/status\//
+        )?.[1]
       : "";
-    if (handleFromStatus) return `@${handleFromStatus}`;
+    if (relativeHandle && relativeHandle !== "i") return `@${relativeHandle}`;
 
     const handleText = Array.from(article.querySelectorAll("span"))
       .map((node) => node.textContent || "")
@@ -199,8 +204,9 @@
     mount.setAttribute("aria-label", "Slop Frog controls");
 
     const actionGroup =
-      article.querySelector('[role="group"]') ||
-      article.querySelector('[data-testid="reply"]')?.closest('[role="group"]');
+      article.querySelector('[data-testid="reply"]')?.closest('[role="group"]') ||
+      article.querySelector('[data-testid="like"]')?.closest('[role="group"]') ||
+      article.querySelector('[role="group"]');
 
     if (actionGroup?.parentElement) {
       actionGroup.parentElement.append(mount);
