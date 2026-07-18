@@ -131,7 +131,7 @@ const fixturePosts = fixture.match(/data-testid="tweet"/g) || [];
 assert(fixturePosts.length === 3, "fixture includes three X-style posts");
 
 const popupHtml = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.html"), "utf8");
-assert(!popupHtml.includes("Detector URL"), "popup hides detector URL");
+assert(popupHtml.includes('id="detectorUrl"'), "popup shows detector URL");
 assert(popupHtml.includes('class="frog"'), "popup includes frog brand mark");
 
 const popupCss = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.css"), "utf8");
