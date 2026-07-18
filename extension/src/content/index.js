@@ -8,7 +8,12 @@
   let scanTimer;
 
   injectStyles();
-  queueMicrotask(boot);
+  queueMicrotask(() => {
+    boot().catch(() => {
+      // Chrome can invalidate old content-script contexts immediately after an
+      // extension reload. The new content script will boot on page refresh.
+    });
+  });
 
   async function boot() {
     activeAdapter = getPlatformAdapter(window.location);
@@ -46,9 +51,9 @@
         continue;
       }
 
-      sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope }).then(
-        (response) => renderScored(article, response)
-      );
+      sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope })
+        .then((response) => renderScored(article, response))
+        .catch(() => renderScored(article, makeLocalGrayResponse(article, "extension_context_invalidated")));
     }
   }
 
@@ -620,13 +625,13 @@
 
   function normalizePanelPayload(response) {
     if (response?.ok && response.result) return response;
-    return makeLocalGrayResponse(null);
+    return makeLocalGrayResponse(null, response?.error || "extension_unavailable");
   }
 
-  function makeLocalGrayResponse(article) {
+  function makeLocalGrayResponse(article, reason = "extraction_failed") {
     const platform = activeAdapter?.platform || "x";
     const contentKey = `${platform}:failed:${runtime.stableHash(article?.innerText || Date.now())}`;
-    const scoreResponse = runtime.makeGrayScoreResponse("extraction_failed");
+    const scoreResponse = runtime.makeGrayScoreResponse(reason);
     const result = runtime.composeSlopScore(
       { ...scoreResponse, contentKey },
       null,
@@ -808,7 +813,30 @@
 
   function sendMessage(message) {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(message, (response) => resolve(response || { ok: false }));
+      try {
+        if (!chrome?.runtime?.id) {
+          resolve({ ok: false, error: "extension_context_invalidated" });
+          return;
+        }
+
+        chrome.runtime.sendMessage(message, (response) => {
+          const lastError = chrome.runtime.lastError;
+          if (lastError) {
+            resolve({
+              ok: false,
+              error: lastError.message || "extension_context_invalidated",
+            });
+            return;
+          }
+
+          resolve(response || { ok: false });
+        });
+      } catch (error) {
+        resolve({
+          ok: false,
+          error: error?.message || "extension_context_invalidated",
+        });
+      }
     });
   }
 
