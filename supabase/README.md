@@ -24,3 +24,9 @@ Run this live verification after applying the schema:
 ```sh
 /opt/homebrew/bin/node supabase/dev/verify-vote.mjs
 ```
+
+Appeals use the separate `submit_appeal` RPC and preserve the submitted status:
+
+```sh
+/opt/homebrew/bin/node supabase/dev/verify-appeal.mjs
+```

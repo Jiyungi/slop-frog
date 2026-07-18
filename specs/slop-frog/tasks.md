@@ -181,7 +181,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** A voted fixture returns a non-null aggregate score.
 
 - [ ] 13. Implement appeals and verdict history (Owner: Person B)
-  - [ ] 13.1 Implement appeal insert helper
+  - [x] 13.1 Implement appeal insert helper
     - Store appeal reason and status.
     - _Requirements: 12.1, 12.2, 12.3_
     - **Verification:** Submitting a demo appeal creates a row in `appeals`.

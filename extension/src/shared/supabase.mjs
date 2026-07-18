@@ -108,3 +108,50 @@ export async function fetchCommunityAggregate(
     updatedAt: aggregate.updated_at,
   };
 }
+
+export async function submitAppeal(config, appeal, fetchImpl = globalThis.fetch) {
+  if (!isSupabaseConfigured(config)) {
+    throw new Error("Supabase is not configured for this extension.");
+  }
+
+  if (!appeal?.contentKey || !appeal?.reviewerId || !appeal?.reason || !appeal?.status) {
+    throw new Error("A content key, reviewer ID, reason, and status are required.");
+  }
+
+  const response = await fetchImpl(
+    `${String(config.url).replace(/\/+$/, "")}/rest/v1/rpc/submit_appeal`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        p_content_key: appeal.contentKey,
+        p_reviewer_id: appeal.reviewerId,
+        p_reason: appeal.reason,
+        p_status: appeal.status,
+      }),
+    }
+  );
+
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.message || `Supabase appeal request failed (HTTP ${response.status}).`);
+  }
+
+  if (!Array.isArray(body) || body.length !== 1) {
+    throw new Error("Supabase did not return the saved appeal.");
+  }
+
+  const savedAppeal = body[0];
+  return {
+    id: savedAppeal.id,
+    contentKey: savedAppeal.content_key,
+    reviewerId: savedAppeal.reviewer_id,
+    reason: savedAppeal.reason,
+    status: savedAppeal.status,
+    createdAt: savedAppeal.created_at,
+  };
+}

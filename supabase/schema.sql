@@ -234,3 +234,51 @@ $$;
 
 revoke all on function public.get_community_aggregate(text) from public;
 grant execute on function public.get_community_aggregate(text) to anon, authenticated;
+
+create or replace function public.submit_appeal(
+  p_content_key text,
+  p_reviewer_id text,
+  p_reason text,
+  p_status text default 'submitted'
+)
+returns table (
+  id uuid,
+  content_key text,
+  reviewer_id text,
+  reason text,
+  status text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce(trim(p_content_key), '') = '' then
+    raise exception 'content_key is required';
+  end if;
+
+  if coalesce(trim(p_reviewer_id), '') = '' then
+    raise exception 'reviewer_id is required';
+  end if;
+
+  if coalesce(trim(p_reason), '') = '' then
+    raise exception 'reason is required';
+  end if;
+
+  return query
+  insert into public.appeals (content_key, reviewer_id, reason, status)
+  values (p_content_key, p_reviewer_id, p_reason, p_status)
+  returning
+    appeals.id,
+    appeals.content_key,
+    appeals.reviewer_id,
+    appeals.reason,
+    appeals.status,
+    appeals.created_at;
+end;
+$$;
+
+revoke all on function public.submit_appeal(text, text, text, text) from public;
+grant execute on function public.submit_appeal(text, text, text, text)
+to anon, authenticated;
