@@ -15,6 +15,7 @@
     observer = new MutationObserver(queueScan);
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("scroll", queueScan, { passive: true });
+    document.addEventListener("keydown", closePanelsOnEscape);
   }
 
   async function getSettings() {
@@ -233,8 +234,14 @@
           ? createFeedbackPanel(payload)
           : createAppealPanel(payload);
 
+    panel.append(createPanelCloseButton(panel));
     const mount = ensureMount(article);
     mount.after(panel);
+  }
+
+  function closePanelsOnEscape(event) {
+    if (event.key !== "Escape") return;
+    document.querySelectorAll(".slop-frog-panel").forEach((panel) => panel.remove());
   }
 
   function createEvidencePanel(payload) {
@@ -404,6 +411,21 @@
     return control;
   }
 
+  function createPanelCloseButton(panel) {
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "slop-frog-close";
+    close.title = "Close";
+    close.setAttribute("aria-label", "Close Slop Frog panel");
+    close.textContent = "×";
+    close.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      panel.remove();
+    });
+    return close;
+  }
+
   function normalizePanelPayload(response) {
     if (response?.ok && response.result) return response;
     return makeLocalGrayResponse(null);
@@ -563,6 +585,8 @@
         box-shadow: none;
         color: var(--sf-green);
         font-family: var(--sf-font);
+        position: relative;
+        z-index: 4;
       }
 
       article.slop-frog-anchored {
@@ -684,6 +708,7 @@
 
       .slop-frog-panel {
         --sf-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        position: relative;
         display: grid;
         gap: 8px;
         max-width: min(388px, calc(100% - 24px));
@@ -699,6 +724,7 @@
           0 18px 40px color-mix(in oklch, black 38%, transparent),
           inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
         font: 12px/1.35 var(--sf-font);
+        z-index: 3;
       }
 
       .slop-frog-panel p {
@@ -719,6 +745,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 14px;
+        padding-right: 22px;
       }
 
       .slop-frog-panel-head strong {
@@ -809,6 +836,31 @@
         box-shadow:
           0 6px 16px color-mix(in oklch, black 22%, transparent),
           inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+      }
+
+      .slop-frog-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: grid;
+        width: 22px;
+        min-width: 22px;
+        height: 22px;
+        min-height: 22px;
+        place-items: center;
+        padding: 0 !important;
+        border-radius: 999px !important;
+        color: oklch(87% 0.055 154) !important;
+        background: color-mix(in oklch, white 7%, transparent) !important;
+        border-color: color-mix(in oklch, white 14%, transparent) !important;
+        box-shadow: none !important;
+        font-size: 16px !important;
+        line-height: 1 !important;
+      }
+
+      .slop-frog-close:hover {
+        color: oklch(98% 0.012 154) !important;
+        background: color-mix(in oklch, white 13%, transparent) !important;
       }
 
       article.slop-frog-filtered > *:not(.slop-frog-filter-card) {

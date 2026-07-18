@@ -82,6 +82,16 @@ assert(
   "evidence panel renders Slop Score row"
 );
 assert(
+  contentScript.includes("createPanelCloseButton") &&
+    contentScript.includes('close.textContent = "×"'),
+  "panels include a close button"
+);
+assert(
+  contentScript.includes("closePanelsOnEscape") &&
+    contentScript.includes('event.key !== "Escape"'),
+  "panels can close with Escape"
+);
+assert(
   !sliceFunction(contentScript, "createEvidencePanel").includes("Looks AI"),
   "evidence panel does not contain feedback choices"
 );
