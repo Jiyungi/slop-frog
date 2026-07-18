@@ -68,8 +68,8 @@ assert(
   "pending detector state shows Scoring, not Gray"
 );
 assert(
-  contentScript.includes("insertBefore(mount, actionGroup)"),
-  "controls render before X action row"
+  contentScript.includes("actionGroup.parentElement.after(mount)"),
+  "controls render after X action row"
 );
 assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),
@@ -97,8 +97,9 @@ assert(!popupHtml.includes("Detector URL"), "popup hides detector URL");
 assert(popupHtml.includes('class="frog"'), "popup includes frog brand mark");
 
 const popupCss = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.css"), "utf8");
-assert(popupCss.includes("ui-rounded"), "popup uses rounded legible system font");
-assert(contentScript.includes("ui-rounded"), "feed UI uses rounded legible system font");
+assert(popupCss.includes("--frog-display"), "popup uses a separate display font for the brand");
+assert(contentScript.includes("--sf-display"), "feed UI declares a separate display font");
+assert(!popupCss.includes("ui-rounded"), "popup avoids ui-rounded dependency");
 
 console.log("Person A verification passed");
 

@@ -210,7 +210,7 @@
       article.querySelector('[role="group"]');
 
     if (actionGroup?.parentElement) {
-      actionGroup.parentElement.insertBefore(mount, actionGroup);
+      actionGroup.parentElement.after(mount);
     } else {
       article.append(mount);
     }
@@ -544,9 +544,10 @@
     style.id = "slop-frog-style";
     style.textContent = `
       .slop-frog-controls {
-        --sf-font: ui-rounded, "SF Pro Rounded", "Avenir Next", "Nunito Sans", "Segoe UI", system-ui, sans-serif;
-        --sf-moss: oklch(15% 0.03 154);
-        --sf-moss-2: oklch(20% 0.045 154);
+        --sf-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --sf-display: "Arial Rounded MT Bold", "Trebuchet MS", Inter, system-ui, sans-serif;
+        --sf-moss: oklch(14% 0.026 154);
+        --sf-moss-2: oklch(22% 0.045 154);
         --sf-line: oklch(44% 0.085 154);
         --sf-text: oklch(96% 0.016 154);
         --sf-muted: oklch(78% 0.052 154);
@@ -556,17 +557,13 @@
         justify-content: flex-start;
         flex: 0 0 auto;
         align-self: center;
-        gap: 5px;
+        gap: 6px;
         width: fit-content;
-        margin: 10px 0 2px 0;
-        padding: 4px;
-        border: 1px solid color-mix(in oklch, var(--sf-line) 72%, transparent);
-        border-radius: 999px;
-        background:
-          linear-gradient(180deg, color-mix(in oklch, var(--sf-moss-2) 92%, transparent), color-mix(in oklch, var(--sf-moss) 96%, transparent));
-        box-shadow:
-          0 10px 26px color-mix(in oklch, black 32%, transparent),
-          inset 0 1px 0 color-mix(in oklch, white 11%, transparent);
+        margin: 7px 0 2px 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
         color: var(--sf-green);
         font-family: var(--sf-font);
       }
@@ -575,23 +572,27 @@
       .slop-frog-panel button,
       .slop-frog-filter-card button {
         appearance: none;
-        border: 1px solid color-mix(in oklch, currentColor 28%, transparent);
-        background: color-mix(in oklch, currentColor 13%, transparent);
+        border: 1px solid color-mix(in oklch, currentColor 34%, transparent);
+        background:
+          linear-gradient(180deg, color-mix(in oklch, var(--sf-moss-2) 92%, transparent), color-mix(in oklch, var(--sf-moss) 96%, transparent));
         color: var(--sf-green);
-        border-radius: 999px;
+        border-radius: 12px;
         cursor: pointer;
-        font: 720 11px/1 var(--sf-font);
+        font: 700 11px/1 var(--sf-font);
         letter-spacing: -0.01em;
+        box-shadow:
+          0 7px 16px color-mix(in oklch, black 28%, transparent),
+          inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
         transition: background-color 130ms ease-out, border-color 130ms ease-out, color 130ms ease-out, transform 130ms ease-out;
       }
 
       .slop-frog-button {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        min-height: 25px;
-        padding: 4px 9px;
-        box-shadow: inset 0 1px 0 color-mix(in oklch, white 9%, transparent);
+        justify-content: center;
+        gap: 5px;
+        min-height: 26px;
+        padding: 5px 10px;
       }
 
       .slop-frog-button svg {
@@ -601,19 +602,21 @@
 
       .slop-frog-button.is-feedback,
       .slop-frog-button.is-appeal {
-        width: 24px;
-        min-height: 24px;
+        width: 27px;
+        min-height: 26px;
         justify-content: center;
-        padding: 4px;
+        padding: 5px;
         color: oklch(82% 0.14 151);
-        background: color-mix(in oklch, var(--sf-green) 8%, transparent);
+        background:
+          linear-gradient(180deg, oklch(21% 0.04 154), oklch(14.5% 0.026 154));
       }
 
       .slop-frog-button:hover,
       .slop-frog-panel button:hover,
       .slop-frog-filter-card button:hover {
-        background: color-mix(in oklch, currentColor 18%, transparent);
-        border-color: color-mix(in oklch, currentColor 44%, transparent);
+        background:
+          linear-gradient(180deg, color-mix(in oklch, currentColor 20%, oklch(21% 0.04 154)), color-mix(in oklch, currentColor 12%, oklch(14.5% 0.026 154)));
+        border-color: color-mix(in oklch, currentColor 52%, transparent);
       }
 
       .slop-frog-button:active {
@@ -657,14 +660,14 @@
       }
 
       .slop-frog-panel {
-        --sf-font: ui-rounded, "SF Pro Rounded", "Avenir Next", "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+        --sf-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         display: grid;
         gap: 8px;
         max-width: min(388px, calc(100% - 24px));
         margin: 8px auto 10px 0;
         padding: 12px;
         border: 1px solid oklch(39% 0.07 154);
-        border-radius: 18px;
+        border-radius: 16px;
         background:
           radial-gradient(circle at 95% 0%, color-mix(in oklch, oklch(78% 0.18 149) 14%, transparent), transparent 32%),
           linear-gradient(180deg, oklch(19% 0.035 154), oklch(13.5% 0.026 154));
@@ -680,8 +683,15 @@
         color: oklch(78% 0.055 154);
       }
 
-      .slop-frog-panel-head,
       .slop-frog-row {
+        display: grid;
+        grid-template-columns: minmax(110px, 1fr) minmax(92px, auto);
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .slop-frog-panel-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -700,8 +710,8 @@
 
       .slop-frog-row strong {
         color: oklch(96% 0.014 154);
-        font-weight: 760;
-        max-width: 58%;
+        font-weight: 720;
+        max-width: 170px;
         overflow: hidden;
         text-align: right;
         text-overflow: ellipsis;
@@ -732,7 +742,7 @@
       .slop-frog-chart-block {
         display: grid;
         gap: 4px;
-        color: oklch(42% 0.03 155);
+        color: oklch(79% 0.052 154);
       }
 
       .slop-frog-chart {
@@ -783,7 +793,7 @@
       }
 
       .slop-frog-filter-card {
-        --sf-font: ui-rounded, "SF Pro Rounded", "Avenir Next", "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+        --sf-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         display: flex;
         align-items: center;
         gap: 7px;
