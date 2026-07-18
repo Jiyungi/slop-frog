@@ -16,6 +16,7 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 6. **Supabase is the community memory.** Supabase stores votes, reviewer weights, appeals, aggregate labels, hashes, and verdict history. Raw media is not stored.
 7. **No hidden training pipeline.** Future training architecture is documented, but disabled in the MVP.
 8. **Verified tasks only.** A task is complete only after its verification step has passed.
+9. **Quiet UI, low text.** UI must use Impeccable guidance and avoid unnecessary explanatory copy. Buttons should be icon-first with short labels/tooltips, like a social media app. Evidence, feedback, and appeals must be separate focused surfaces.
 
 ## Technology Stack
 
@@ -32,7 +33,7 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 | Charts | Lightweight SVG or DOM charts in evidence panel |
 | Packaging | Developer-mode extension plus local detector command |
 
-The user-facing UI is specified in [`ui.md`](ui.md). In short, users see compact Slop Frog flags directly on X posts, an inline evidence panel when a flag is opened, a collapsed warning row for red posts when auto-filter is enabled, and a small extension popup for detector/Supabase status and settings.
+The user-facing UI is specified in [`ui.md`](ui.md). In short, users see compact Slop Frog controls directly on X posts: a flag button for evidence, a feedback icon button for community labeling, and an appeal icon button for challenging the label. The evidence panel does not contain feedback or appeal controls. Red posts collapse into a warning row only when auto-filter is enabled. The extension popup handles detector/Supabase status and settings.
 
 ## High-Level Architecture
 
@@ -272,6 +273,7 @@ Responsibilities:
 - extract `Post_Envelope`;
 - render compact Slop Frog flags as described in `ui.md`;
 - render the inline evidence panel;
+- render separate feedback and appeal panels;
 - collapse red posts when auto-filter is enabled;
 - observe new posts while scrolling.
 

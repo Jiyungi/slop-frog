@@ -4,6 +4,10 @@
 
 Slop Frog should feel like a small trust layer added to X, not a separate app. The user scrolls normally. Each scored post gets a compact Slop Frog flag near the post actions or upper-right area of the post container.
 
+UI work must use the Impeccable design skill guidance. The extension should avoid generic AI-looking UI patterns, unnecessary explanatory copy, oversized cards, and text-heavy panels.
+
+The most important UI rule is: **less text unless the user is answering a question.** A good product does not explain every obvious surface. Social apps do not label the home button with "Here is the homepage where posts from other users appear." Slop Frog should use clear compact buttons, familiar icons, short labels, and tooltips. Too much explanatory text makes the product feel AI-generated.
+
 The default UI is intentionally small:
 
 ```text
@@ -11,11 +15,29 @@ The default UI is intentionally small:
 | @author                                      |
 | This is the X post text...                   |
 |                                              |
-| [reply] [repost] [like]   Slop Frog: Yellow  |
+| [reply] [repost] [like]   [Yellow] [F] [A]   |
 +----------------------------------------------+
 ```
 
-The exact icon can change, but the label must not rely on color alone. Each state needs text, color, and a small symbol.
+The compact controls are:
+
+- flag button: opens evidence only;
+- feedback button: opens community feedback only;
+- appeal button: opens appeal flow only.
+
+The buttons should be simple, quiet, and non-distracting. Use icons with short accessible labels and hover/tooltips. Do not put long explanatory text beside every icon.
+
+Recommended lucide icons:
+
+- flag/evidence: `Flag`;
+- feedback: `MessageSquareCheck`;
+- appeal: `ShieldAlert`.
+
+Fallback labels if icons are unavailable:
+
+- `Flag`;
+- `Feedback`;
+- `Appeal`.
 
 ## Compact flag states
 
@@ -37,7 +59,8 @@ Behavior:
 
 - if auto-filter is off, the post remains visible;
 - if auto-filter is on, the post collapses;
-- user can always reveal the post.
+- user can always reveal the post;
+- clicking the flag opens the evidence panel.
 
 ### Yellow
 
@@ -105,6 +128,97 @@ Common gray reasons:
 - media type is unsupported;
 - detector timed out.
 
+## Compact action buttons
+
+The three controls should sit together and stay visually lighter than X's native action row.
+
+```text
+[Yellow] [MessageSquareCheck] [ShieldAlert]
+```
+
+The user should be able to figure out the basic interaction from the icons, placement, and tooltip. The UI should not say things like "Click here to provide community feedback on whether this post is AI-generated" unless the user has opened the feedback form.
+
+### Flag button
+
+Purpose:
+
+```text
+Open evidence
+```
+
+Icon:
+
+```text
+Flag
+```
+
+Visible text:
+
+```text
+Red
+Yellow
+Green
+Gray
+```
+
+Tooltip:
+
+```text
+View Slop Score evidence
+```
+
+### Feedback button
+
+Purpose:
+
+```text
+Submit community label
+```
+
+Icon:
+
+```text
+MessageSquareCheck
+```
+
+Visible text:
+
+```text
+None by default, icon only
+```
+
+Tooltip:
+
+```text
+Add feedback
+```
+
+### Appeal button
+
+Purpose:
+
+```text
+Challenge the label
+```
+
+Icon:
+
+```text
+ShieldAlert
+```
+
+Visible text:
+
+```text
+None by default, icon only
+```
+
+Tooltip:
+
+```text
+Appeal label
+```
+
 ## Expanded evidence panel
 
 When the user clicks the compact flag, the post expands a small inline panel below the flag.
@@ -125,8 +239,6 @@ When the user clicks the compact flag, the post expands a small inline panel bel
 |                                              |
 | Why: polished generic phrasing, low entropy  |
 |                                              |
-| [Looks AI] [Looks human] [Unsure] [Appeal]   |
-|                                              |
 | Score over time:     _/--                    |
 | Volume vs score:    . . * *                  |
 +----------------------------------------------+
@@ -140,10 +252,57 @@ The panel should show:
 - community score and vote count;
 - modality rows for text, image, audio, and video;
 - gray reason when gray;
-- vote buttons;
-- appeal button;
 - simple score-over-time graph;
 - simple volume-vs-score graph.
+
+The evidence panel must not include feedback voting controls or appeal controls. Those are separate actions beside the flag.
+
+## Feedback panel
+
+When the user clicks the feedback icon, open a small focused panel. This is the place where a question is appropriate, so a little text is allowed.
+
+```text
++----------------------------------------------+
+| Community feedback                           |
+| What do you think?                           |
+|                                              |
+| [Looks AI] [Looks human] [Unsure]            |
+|                                              |
+| [Submit]                                     |
++----------------------------------------------+
+```
+
+Rules:
+
+- keep the first version to one question;
+- make the three choices large enough to tap/click;
+- do not show detector details here;
+- optional notes can be added later, but should not be visible by default.
+
+## Appeal panel
+
+When the user clicks the appeal icon, open a separate focused panel.
+
+```text
++----------------------------------------------+
+| Appeal label                                 |
+| Why is this wrong?                           |
+|                                              |
+| [Human-written]                              |
+| [AI-assisted, not fully AI]                  |
+| [Missing context]                            |
+| [Other]                                      |
+|                                              |
+| [Submit appeal]                              |
++----------------------------------------------+
+```
+
+Rules:
+
+- keep appeal separate from community feedback;
+- ask one clear question;
+- use short answer choices;
+- do not bury the appeal action inside the evidence panel.
 
 ## Red auto-filter state
 

@@ -107,12 +107,12 @@ No task may be marked complete until its verification step has passed. Code exis
 
 - [ ] 8. Implement in-feed flag UI (Owner: Person A)
   - [ ] 8.1 Render compact flags on X posts
-    - Insert the compact Slop Frog flag states from `specs/slop-frog/ui.md` into the post container without breaking X layout.
+    - Insert the compact Slop Frog controls from `specs/slop-frog/ui.md`: flag/evidence, feedback, and appeal. Use quiet icon-first buttons and avoid unnecessary explanatory text.
     - _Requirements: 6.6, 6.7, 8.8_
     - **Verification:** At least three X posts show stable flags while scrolling and no text overlaps post content.
 
   - [ ] 8.2 Render evidence panel
-    - Show the inline evidence panel from `specs/slop-frog/ui.md`: detector score, Slop Score, community score, modality rows, gray reason, vote buttons, appeal action, and simple history area.
+    - Show the inline evidence panel from `specs/slop-frog/ui.md`: detector score, Slop Score, community score, modality rows, gray reason, and simple history area. Do not include feedback or appeal controls inside the evidence panel.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
     - **Verification:** Clicking a flag opens the panel and all required sections render from fixture data.
 
@@ -120,6 +120,11 @@ No task may be marked complete until its verification step has passed. Code exis
     - Collapse red posts only when auto-filter is enabled and include a reveal control.
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
     - **Verification:** A red fixture collapses only when auto-filter is on; yellow, green, and gray do not collapse.
+
+  - [ ] 8.4 Render separate feedback and appeal panels
+    - Feedback opens from the `MessageSquareCheck` icon. Appeal opens from the `ShieldAlert` icon. Each panel asks one focused question and stays separate from evidence.
+    - _Requirements: 8.7, 9.6, 12.1_
+    - **Verification:** Feedback and appeal open from their own buttons, and neither action appears inside the evidence panel.
 
 - [ ] 9. Implement evidence charts in UI (Owner: Person A)
   - [ ] 9.1 Add longitudinal score graph
@@ -243,7 +248,7 @@ No task may be marked complete until its verification step has passed. Code exis
     { "id": 0, "name": "Shared contracts", "tasks": ["1.1", "2.1", "2.2", "2.3", "3.1", "3.2", "4.1"] },
     { "id": 1, "name": "Parallel foundations", "tasks": ["5.1", "5.2", "10.1", "10.2", "12.1"] },
     { "id": 2, "name": "Parallel core implementation", "tasks": ["6.1", "6.2", "6.3", "7.1", "7.2", "11.1", "11.2", "11.3", "12.2", "12.3"] },
-    { "id": 3, "name": "Parallel product features", "tasks": ["7.3", "8.1", "8.2", "8.3", "9.1", "9.2", "13.1", "13.2", "14.1"] },
+    { "id": 3, "name": "Parallel product features", "tasks": ["7.3", "8.1", "8.2", "8.3", "8.4", "9.1", "9.2", "13.1", "13.2", "14.1"] },
     { "id": 4, "name": "Integration", "tasks": ["15.1", "16.1", "16.2"] },
     { "id": 5, "name": "Final verification", "tasks": ["17.1", "17.2", "18.1"] }
   ],
