@@ -22,42 +22,42 @@ No task may be marked complete until its verification step has passed. Code exis
 
 ## Tasks
 
-- [ ] 1. Create project skeleton and shared folder layout (Owner: Both)
-  - [ ] 1.1 Create top-level implementation folders
+- [x] 1. Create project skeleton and shared folder layout (Owner: Both)
+  - [x] 1.1 Create top-level implementation folders
     - Create `extension/`, `extension/src/shared/`, `local-detector/`, and `supabase/`.
     - Add placeholder README files only if needed to preserve empty folders.
     - _Requirements: 1.1, 2.1_
     - **Verification:** `rg --files` shows the expected folders and no implementation code depends on missing paths.
 
-- [ ] 2. Define shared contracts before parallel work (Owner: Both)
-  - [ ] 2.1 Define the shared TypeScript contracts
+- [x] 2. Define shared contracts before parallel work (Owner: Both)
+  - [x] 2.1 Define the shared TypeScript contracts
     - Create `extension/src/shared/contracts.ts` containing `PostEnvelope`, `ScoreRequest`, `ScoreResponse`, `CommunityAggregate`, `CompositeResult`, `FlagLabel`, and `ExtensionSettings`.
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
     - **Verification:** The file exports all required types and includes only the four allowed labels: `red`, `yellow`, `green`, `gray`.
 
-  - [ ] 2.2 Define thresholds and evidence coverage constants
+  - [x] 2.2 Define thresholds and evidence coverage constants
     - Create `extension/src/shared/thresholds.ts` with red threshold 75, yellow threshold 40, evidence coverage minimum 50, and localhost URL `http://localhost:8765`.
     - _Requirements: 5.2, 5.3, 6.4, 6.5_
     - **Verification:** Both extension code and local detector docs reference the same constants.
 
-  - [ ] 2.3 Create fixture posts
+  - [x] 2.3 Create fixture posts
     - Add at least three fixture posts: short gray fixture, medium yellow fixture, and high-risk red fixture.
     - _Requirements: 2.6, 16.3_
     - **Verification:** Person A and Person B can both run the same fixture JSON through their side without changing the schema.
 
-- [ ] 3. Define Supabase contract before UI work (Owner: Both)
-  - [ ] 3.1 Create Supabase schema file
+- [x] 3. Define Supabase contract before UI work (Owner: Both)
+  - [x] 3.1 Create Supabase schema file
     - Create `supabase/schema.sql` defining `content_items`, `reviewers`, `community_votes`, `appeals`, `verdict_history`, and a community aggregate view.
     - _Requirements: 9.1, 10.1, 11.2, 12.4_
     - **Verification:** Schema can be reviewed without missing required columns from requirements.md.
 
-  - [ ] 3.2 Define Supabase environment contract
+  - [x] 3.2 Define Supabase environment contract
     - Document required values: Supabase URL, anon key, and demo reviewer ID.
     - _Requirements: 9.1, 14.1_
     - **Verification:** README or env example names required variables without secret values.
 
-- [ ] 4. Define extension permission contract (Owner: Both)
-  - [ ] 4.1 Draft Manifest V3 permissions
+- [x] 4. Define extension permission contract (Owner: Both)
+  - [x] 4.1 Draft Manifest V3 permissions
     - Include only `storage`, X/Twitter host permissions, localhost detector permission, and Supabase host permission.
     - _Requirements: 14.1, 14.2, 14.3_
     - **Verification:** Manifest does not include `<all_urls>` or unrelated host permissions.
