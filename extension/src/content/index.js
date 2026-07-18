@@ -3,18 +3,31 @@
   const processedArticles = new WeakMap();
   const panelState = new WeakMap();
   let settings = { ...runtime.DEFAULT_EXTENSION_SETTINGS };
+  let activeAdapter;
   let observer;
   let scanTimer;
+  let stopped = false;
 
+  window.addEventListener("error", suppressInvalidatedContextError, true);
+  window.addEventListener("unhandledrejection", suppressInvalidatedContextError, true);
   injectStyles();
-  boot();
+  queueMicrotask(() => {
+    boot().catch(() => {
+      // Chrome can invalidate old content-script contexts immediately after an
+      // extension reload. The new content script will boot on page refresh.
+    });
+  });
 
   async function boot() {
+    activeAdapter = getPlatformAdapter(window.location);
+    if (!activeAdapter) return;
     settings = await getSettings();
+    if (stopped) return;
     scanVisiblePosts();
     observer = new MutationObserver(queueScan);
     observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("scroll", queueScan, { passive: true });
+    window.addEventListener("scroll", guardedEvent(queueScan), { passive: true });
+    document.addEventListener("keydown", guardedEvent(closePanelsOnEscape));
   }
 
   async function getSettings() {
@@ -23,18 +36,18 @@
   }
 
   function queueScan() {
+    if (stopped) return;
     window.clearTimeout(scanTimer);
     scanTimer = window.setTimeout(scanVisiblePosts, 180);
   }
 
   function scanVisiblePosts() {
-    const articles = Array.from(
-      document.querySelectorAll('article[data-testid="tweet"]')
-    );
+    if (stopped || !activeAdapter) return;
+    const articles = activeAdapter.findPosts(document);
 
     for (const article of articles) {
       if (processedArticles.has(article)) continue;
-      const envelope = extractPostEnvelope(article);
+      const envelope = extractPostEnvelope(article, activeAdapter);
       processedArticles.set(article, envelope?.contentKey || "failed");
       renderPending(article);
 
@@ -43,13 +56,95 @@
         continue;
       }
 
-      sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope }).then(
-        (response) => renderScored(article, response)
-      );
+      sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope })
+        .then((response) => renderScored(article, response))
+        .catch((error) => {
+          if (isContextInvalidation(error?.message)) {
+            stopContentScript();
+            return;
+          }
+          renderScored(article, makeLocalGrayResponse(article, "extension_unavailable"));
+        });
     }
   }
 
-  function extractPostEnvelope(article) {
+  function getPlatformAdapter(location) {
+    const host = location.hostname.replace(/^www\./, "");
+    return PLATFORM_ADAPTERS.find((adapter) =>
+      adapter.hostnames.some((hostname) => host === hostname || host.endsWith(`.${hostname}`))
+    );
+  }
+
+  const PLATFORM_ADAPTERS = [
+    {
+      platform: "x",
+      hostnames: ["x.com", "twitter.com"],
+      findPosts(root) {
+        return Array.from(root.querySelectorAll('article[data-testid="tweet"]'));
+      },
+      extract: extractXPost,
+      findInsertionPoint: findXActionGroup,
+    },
+    {
+      platform: "linkedin",
+      hostnames: ["linkedin.com"],
+      findPosts(root) {
+        return findLinkedInPosts(root);
+      },
+      extract: extractLinkedInPost,
+      findInsertionPoint(post) {
+        return (
+          post.querySelector(".feed-shared-social-action-bar") ||
+          post.querySelector(".social-actions") ||
+          post.querySelector('[aria-label*="React"]')?.closest('[role="group"]') ||
+          post.querySelector('[aria-label*="Like"]')?.closest('[role="group"]') ||
+          post.querySelector(".social-details-social-counts") ||
+          post
+        );
+      },
+    },
+  ];
+
+  const LINKEDIN_TEXT_SELECTORS = [
+    ".update-components-text",
+    ".feed-shared-inline-show-more-text",
+    ".feed-shared-text",
+    ".break-words",
+    ".feed-shared-update-v2__description-wrapper",
+    '[data-test-id="main-feed-activity-card__commentary"]',
+    '[data-test-id="feed-shared-update-v2__commentary"]',
+    '[dir="ltr"]',
+  ];
+
+  function extractPostEnvelope(article, adapter) {
+    const extracted = adapter.extract(article);
+    const visibleText = extracted.visibleText || "";
+    const normalizedText = runtime.normalizeText(visibleText);
+    const textHash = runtime.stableHash(
+      `${adapter.platform}:${normalizedText.toLowerCase()}:${extracted.url || ""}`
+    );
+
+    if (!extracted.id && !normalizedText && !extracted.imageUrls?.length) {
+      return null;
+    }
+
+    return {
+      platform: adapter.platform,
+      contentKey: extracted.id
+        ? `${adapter.platform}:${extracted.id}`
+        : `${adapter.platform}:text:${textHash}`,
+      tweetId: adapter.platform === "x" ? extracted.id : undefined,
+      url: extracted.url,
+      authorHandle: extracted.authorHandle,
+      visibleText,
+      normalizedText,
+      textHash,
+      imageUrls: extracted.imageUrls || [],
+      extractedAt: new Date().toISOString(),
+    };
+  }
+
+  function extractXPost(article) {
     const statusAnchor = Array.from(article.querySelectorAll('a[href*="/status/"]'))
       .map((anchor) => anchor.href)
       .find(Boolean);
@@ -62,21 +157,37 @@
       .map((image) => image.src)
       .filter(Boolean);
 
-    if (!tweetId && !normalizedText && imageUrls.length === 0) {
-      return null;
-    }
-
     return {
-      platform: "x",
-      contentKey: tweetId ? `x:${tweetId}` : `x:text:${textHash}`,
-      tweetId,
+      id: tweetId,
       url: statusAnchor,
       authorHandle,
       visibleText,
-      normalizedText,
-      textHash,
       imageUrls,
-      extractedAt: new Date().toISOString(),
+    };
+  }
+
+  function extractLinkedInPost(post) {
+    const url = firstHref(post, [
+      'a[href*="/feed/update/"]',
+      'a[href*="activity:"]',
+      'a[href*="urn:li:activity"]',
+    ]);
+    const id =
+      post.getAttribute("data-urn")?.split(":").pop() ||
+      post.getAttribute("data-id")?.split(":").pop() ||
+      post.getAttribute("data-activity-urn")?.split(":").pop() ||
+      url?.match(/activity[:/-](\d+)/)?.[1];
+
+    return {
+      id,
+      url,
+      authorHandle: getTextFromSelectors(post, [
+        ".update-components-actor__name",
+        ".feed-shared-actor__name",
+        ".update-components-actor__title",
+      ]),
+      visibleText: getLinkedInText(post),
+      imageUrls: imageUrlsFrom(post, 'img[src]:not([src*="profile-displayphoto"])'),
     };
   }
 
@@ -112,14 +223,99 @@
     return handleText?.trim();
   }
 
+  function findLinkedInPosts(root) {
+    const direct = Array.from(
+      root.querySelectorAll(
+        [
+          ".feed-shared-update-v2",
+          ".occludable-update",
+          '[data-urn*="urn:li:activity"]',
+          '[data-id*="urn:li:activity"]',
+          "[data-activity-urn]",
+        ].join(", ")
+      )
+    );
+    const fromText = Array.from(root.querySelectorAll(LINKEDIN_TEXT_SELECTORS.join(", ")))
+      .map((node) =>
+        node.closest(
+          '.feed-shared-update-v2, .occludable-update, [data-urn*="urn:li:activity"], [data-id*="urn:li:activity"], [data-activity-urn], article'
+        )
+      )
+      .filter(Boolean);
+
+    return uniqueTopLevel([...direct, ...fromText]).filter((post) => {
+      const text = getLinkedInText(post);
+      return text.length > 8 || imageUrlsFrom(post).length > 0;
+    });
+  }
+
+  function getLinkedInText(post) {
+    const selectedText = getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS);
+    if (selectedText.length > 0) return cleanLinkedInText(selectedText);
+    return cleanLinkedInText(post.innerText || post.textContent || "");
+  }
+
+  function cleanLinkedInText(text) {
+    return String(text || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter(
+        (line) =>
+          !/^(Like|Comment|Repost|Send|Follow|Connect|Promoted|Suggested|Show more|See translation)$/i.test(
+            line
+          )
+      )
+      .slice(0, 10)
+      .join("\n");
+  }
+
+  function getTextFromSelectors(root, selectors) {
+    for (const selector of selectors) {
+      const text = Array.from(root.querySelectorAll(selector))
+        .map((node) => node.innerText || node.textContent || "")
+        .map((textValue) => textValue.trim())
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+      if (text.length > 0) return text;
+    }
+    return "";
+  }
+
+  function firstHref(root, selectors) {
+    for (const selector of selectors) {
+      const href = Array.from(root.querySelectorAll(selector))
+        .map((anchor) => anchor.href)
+        .find(Boolean);
+      if (href) return href;
+    }
+    return undefined;
+  }
+
+  function imageUrlsFrom(root, selector = "img[src]") {
+    return Array.from(root.querySelectorAll(selector))
+      .map((image) => image.currentSrc || image.src)
+      .filter(Boolean)
+      .filter((src) => !src.startsWith("data:"))
+      .slice(0, 8);
+  }
+
+  function uniqueTopLevel(nodes) {
+    const list = Array.from(nodes);
+    return list.filter(
+      (node) => !list.some((other) => other !== node && other.contains(node))
+    );
+  }
+
   function renderPending(article) {
     const mount = ensureMount(article);
     mount.replaceChildren(
       createControlButton({
         kind: "evidence",
-        label: "Scoring",
+        label: "",
         title: "Scoring",
-        icon: iconFrog(),
+        icon: iconVerdictFlag("loading"),
         tone: "loading",
         onClick: () => {},
       })
@@ -127,7 +323,8 @@
   }
 
   function renderScored(article, response) {
-    const payload = normalizePanelPayload(response);
+    const payload = normalizePanelPayload(response, article);
+    if (!payload) return;
     const result = payload.result;
     const mount = ensureMount(article);
 
@@ -140,22 +337,22 @@
     mount.replaceChildren(
       createControlButton({
         kind: "evidence",
-        label: formatFlagLabel(result),
+        label: "",
         title: "View Slop Score evidence",
-        icon: iconFrog(),
+        icon: iconVerdictFlag(result.label),
         tone: result.label,
         onClick: () => togglePanel(article, "evidence"),
       }),
       createControlButton({
         kind: "feedback",
         title: "Add feedback",
-        icon: iconFeedback(),
+        icon: iconFrogFeedback(),
         onClick: () => togglePanel(article, "feedback"),
       }),
       createControlButton({
         kind: "appeal",
         title: "Appeal label",
-        icon: iconAppeal(),
+        icon: iconAppealScale(),
         onClick: () => togglePanel(article, "appeal"),
       })
     );
@@ -199,23 +396,33 @@
     let mount = article.querySelector(":scope .slop-frog-controls");
     if (mount) return mount;
 
+    const slot = document.createElement("div");
+    slot.className = "slop-frog-slot";
+
     mount = document.createElement("div");
     mount.className = "slop-frog-controls";
     mount.setAttribute("role", "group");
     mount.setAttribute("aria-label", "Slop Frog controls");
 
-    const actionGroup =
-      article.querySelector('[data-testid="reply"]')?.closest('[role="group"]') ||
-      article.querySelector('[data-testid="like"]')?.closest('[role="group"]') ||
-      article.querySelector('[role="group"]');
-
-    if (actionGroup?.parentElement) {
-      actionGroup.parentElement.after(mount);
+    slot.append(mount);
+    const insertionPoint = activeAdapter?.findInsertionPoint(article);
+    if (insertionPoint && insertionPoint !== article) {
+      insertionPoint.insertAdjacentElement("afterend", slot);
     } else {
-      article.append(mount);
+      article.append(slot);
     }
 
     return mount;
+  }
+
+  function findXActionGroup(article) {
+    const groups = Array.from(article.querySelectorAll('[role="group"]')).filter(
+      (group) =>
+        group.querySelector(
+          '[data-testid="reply"], [data-testid="retweet"], [data-testid="like"]'
+        )
+    );
+    return groups.at(-1) || null;
   }
 
   function togglePanel(article, kind) {
@@ -236,8 +443,14 @@
           ? createFeedbackPanel(payload)
           : createAppealPanel(payload);
 
+    panel.append(createPanelCloseButton(panel));
     const mount = ensureMount(article);
     mount.after(panel);
+  }
+
+  function closePanelsOnEscape(event) {
+    if (event.key !== "Escape") return;
+    document.querySelectorAll(".slop-frog-panel").forEach((panel) => panel.remove());
   }
 
   function createEvidencePanel(payload) {
@@ -300,7 +513,7 @@
             type: "SLOP_FROG_SUBMIT_VOTE",
             payload: {
               contentKey: payload.result.contentKey,
-              platform: "x",
+              platform: payload.post?.platform || activeAdapter?.platform || "x",
               vote,
             },
           });
@@ -399,22 +612,42 @@
     control.setAttribute("aria-label", title);
     control.append(icon);
     if (label) control.append(el("span", {}, label));
-    control.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+    control.addEventListener("click", guardedEvent((event) => {
+      captureUiEvent(event);
+      if (stopped) return;
       onClick();
-    });
+    }));
     return control;
   }
 
-  function normalizePanelPayload(response) {
-    if (response?.ok && response.result) return response;
-    return makeLocalGrayResponse(null);
+  function createPanelCloseButton(panel) {
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "slop-frog-close";
+    close.title = "Close";
+    close.setAttribute("aria-label", "Close Slop Frog panel");
+    close.textContent = "×";
+    close.addEventListener("click", guardedEvent((event) => {
+      captureUiEvent(event);
+      if (stopped) return;
+      if (panel.isConnected) panel.remove();
+    }));
+    return close;
   }
 
-  function makeLocalGrayResponse(article) {
-    const contentKey = `x:failed:${runtime.stableHash(article?.innerText || Date.now())}`;
-    const scoreResponse = runtime.makeGrayScoreResponse("extraction_failed");
+  function normalizePanelPayload(response, article) {
+    if (response?.ok && response.result) return response;
+    if (isContextInvalidation(response?.error)) {
+      stopContentScript();
+      return null;
+    }
+    return makeLocalGrayResponse(article, response?.error || "extension_unavailable");
+  }
+
+  function makeLocalGrayResponse(article, reason = "extraction_failed") {
+    const platform = activeAdapter?.platform || "x";
+    const contentKey = `${platform}:failed:${runtime.stableHash(article?.innerText || Date.now())}`;
+    const scoreResponse = runtime.makeGrayScoreResponse(reason);
     const result = runtime.composeSlopScore(
       { ...scoreResponse, contentKey },
       null,
@@ -450,11 +683,11 @@
   function button(label, onClick) {
     const element = el("button", {}, label);
     element.type = "button";
-    element.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+    element.addEventListener("click", guardedEvent((event) => {
+      captureUiEvent(event);
+      if (stopped) return;
       onClick();
-    });
+    }));
     return element;
   }
 
@@ -480,6 +713,24 @@
 
   function iconFlag() {
     return iconSvg("M5 4v17M6 5h11l-2 4 2 4H6");
+  }
+
+  function iconVerdictFlag(label) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-flag-mark", `is-${label}`);
+    svg.append(
+      svgEl("path", {
+        d: "M6 20V4.8c0-.8.6-1.4 1.4-1.4h9.7c.7 0 1.1.8.7 1.4l-1.7 2.7 1.7 2.7c.4.6 0 1.4-.7 1.4H7.8V20H6Z",
+        fill: "currentColor",
+      }),
+      svgEl("path", {
+        d: "M8 5.4h7.6l-1.2 2.1 1.2 2.1H8V5.4Z",
+        fill: "color-mix(in oklch, white 28%, currentColor)",
+      })
+    );
+    return svg;
   }
 
   function iconFrog() {
@@ -511,8 +762,52 @@
     return iconSvg("M4 5h16v10H8l-4 4V5Zm5 5 2 2 4-5");
   }
 
+  function iconFrogFeedback() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-feedback-mark");
+    svg.append(
+      svgEl("path", {
+        d: "M4 6.8c0-1 .8-1.8 1.8-1.8h12.4c1 0 1.8.8 1.8 1.8v7.8c0 1-.8 1.8-1.8 1.8H10l-4.2 3.1c-.6.4-1.4 0-1.4-.7v-2.9A1.8 1.8 0 0 1 4 14.6V6.8Z",
+        fill: "currentColor",
+      }),
+      svgEl("circle", { cx: 9.3, cy: 10.2, r: 2.1, fill: "color-mix(in oklch, white 22%, currentColor)" }),
+      svgEl("circle", { cx: 14.7, cy: 10.2, r: 2.1, fill: "color-mix(in oklch, white 22%, currentColor)" }),
+      svgEl("circle", { cx: 9.4, cy: 10.2, r: 0.65, fill: "Canvas" }),
+      svgEl("circle", { cx: 14.6, cy: 10.2, r: 0.65, fill: "Canvas" }),
+      svgEl("path", {
+        d: "M9.8 13.1c1.4.8 3 .8 4.4 0",
+        fill: "none",
+        stroke: "Canvas",
+        "stroke-width": "1.2",
+        "stroke-linecap": "round",
+      })
+    );
+    return svg;
+  }
+
   function iconAppeal() {
     return iconSvg("M12 3 5 6v5c0 4 3 7 7 9 4-2 7-5 7-9V6l-7-3Zm0 5v5m0 3h.01");
+  }
+
+  function iconAppealScale() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("slop-frog-appeal-mark");
+    svg.append(
+      svgEl("path", {
+        d: "M12 4v15M7 19h10M5 8h14M12 8 8 14H4l4-6m8 0 4 6h-4l-4-6",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "1.8",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      }),
+      svgEl("circle", { cx: 12, cy: 8, r: 2, fill: "currentColor" })
+    );
+    return svg;
   }
 
   function iconSvg(pathData) {
@@ -534,8 +829,94 @@
 
   function sendMessage(message) {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(message, (response) => resolve(response || { ok: false }));
+      try {
+        if (!chrome?.runtime?.id) {
+          resolve({ ok: false, error: "extension_context_invalidated" });
+          return;
+        }
+
+        chrome.runtime.sendMessage(message, (response) => {
+          const lastError = chrome.runtime.lastError;
+          if (lastError) {
+            resolve({
+              ok: false,
+              error: lastError.message || "extension_context_invalidated",
+            });
+            return;
+          }
+
+          resolve(response || { ok: false });
+        });
+      } catch (error) {
+        resolve({
+          ok: false,
+          error: error?.message || "extension_context_invalidated",
+        });
+      }
     });
+  }
+
+  function isContextInvalidation(message) {
+    return /extension context invalidated|context invalidated/i.test(String(message || ""));
+  }
+
+  function guardedEvent(handler) {
+    return function slopFrogGuardedEvent(event) {
+      if (stopped) return;
+      try {
+        handler(event);
+      } catch (error) {
+        if (isContextInvalidation(error?.message)) {
+          quietStopContentScript();
+          return;
+        }
+        throw error;
+      }
+    };
+  }
+
+  function captureUiEvent(event) {
+    try {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+    } catch (error) {
+      if (isContextInvalidation(error?.message)) {
+        quietStopContentScript();
+        return;
+      }
+      throw error;
+    }
+  }
+
+  function suppressInvalidatedContextError(event) {
+    const message =
+      event?.reason?.message ||
+      event?.error?.message ||
+      event?.message ||
+      String(event?.reason || "");
+
+    if (!isContextInvalidation(message)) return;
+    try {
+      event.preventDefault?.();
+      event.stopImmediatePropagation?.();
+    } catch {
+      // If Chrome invalidated the isolated world, even touching the event can fail.
+    }
+    quietStopContentScript();
+  }
+
+  function stopContentScript() {
+    stopped = true;
+    window.clearTimeout(scanTimer);
+    observer?.disconnect();
+  }
+
+  function quietStopContentScript() {
+    try {
+      stopContentScript();
+    } catch {
+      stopped = true;
+    }
   }
 
   function injectStyles() {
@@ -559,13 +940,34 @@
         align-self: center;
         gap: 6px;
         width: fit-content;
-        margin: 7px 0 2px 0;
+        margin: 0;
         padding: 0;
         border: 0;
         background: transparent;
         box-shadow: none;
         color: var(--sf-green);
         font-family: var(--sf-font);
+        position: relative;
+        z-index: 4;
+      }
+
+      .slop-frog-slot {
+        display: block;
+        width: 100% !important;
+        min-width: 0;
+        max-width: 100%;
+        flex: 0 0 100%;
+        align-self: stretch !important;
+        margin: 6px 0 0 0 !important;
+        padding: 0 !important;
+        text-align: left;
+        pointer-events: none;
+        clear: both;
+      }
+
+      .slop-frog-slot .slop-frog-controls,
+      .slop-frog-slot .slop-frog-panel {
+        pointer-events: auto;
       }
 
       .slop-frog-button,
@@ -591,24 +993,37 @@
         align-items: center;
         justify-content: center;
         gap: 5px;
-        min-height: 26px;
-        padding: 5px 10px;
+        width: 31px;
+        min-width: 31px;
+        height: 29px;
+        min-height: 29px;
+        padding: 0;
       }
 
       .slop-frog-button svg {
-        width: 14px;
-        height: 14px;
+        width: 17px;
+        height: 17px;
       }
 
       .slop-frog-button.is-feedback,
       .slop-frog-button.is-appeal {
-        width: 27px;
-        min-height: 26px;
+        width: 31px;
+        min-width: 31px;
+        height: 29px;
+        min-height: 29px;
         justify-content: center;
-        padding: 5px;
-        color: oklch(82% 0.14 151);
+        padding: 0;
         background:
           linear-gradient(180deg, oklch(21% 0.04 154), oklch(14.5% 0.026 154));
+      }
+
+      .slop-frog-button.is-feedback,
+      .slop-frog-button.is-appeal {
+        color: oklch(96% 0.012 154);
+      }
+
+      .slop-frog-button.is-evidence {
+        color: oklch(72% 0.018 255);
       }
 
       .slop-frog-button:hover,
@@ -631,17 +1046,17 @@
       }
 
       .slop-frog-button.is-red {
-        color: oklch(73% 0.19 31);
+        color: oklch(68% 0.22 31);
         background: color-mix(in oklch, oklch(73% 0.19 31) 16%, transparent);
       }
 
       .slop-frog-button.is-yellow {
-        color: oklch(82% 0.16 82);
+        color: oklch(83% 0.18 83);
         background: color-mix(in oklch, oklch(82% 0.16 82) 16%, transparent);
       }
 
       .slop-frog-button.is-green {
-        color: oklch(75% 0.18 150);
+        color: oklch(75% 0.2 150);
         background: color-mix(in oklch, oklch(75% 0.18 150) 17%, transparent);
       }
 
@@ -659,8 +1074,13 @@
         animation: slop-frog-pulse 900ms ease-in-out infinite;
       }
 
+      .slop-frog-button.is-loading .slop-frog-flag-mark {
+        animation: slop-frog-pulse 900ms ease-in-out infinite;
+      }
+
       .slop-frog-panel {
         --sf-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        position: relative;
         display: grid;
         gap: 8px;
         max-width: min(388px, calc(100% - 24px));
@@ -676,6 +1096,7 @@
           0 18px 40px color-mix(in oklch, black 38%, transparent),
           inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
         font: 12px/1.35 var(--sf-font);
+        z-index: 3;
       }
 
       .slop-frog-panel p {
@@ -696,6 +1117,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 14px;
+        padding-right: 22px;
       }
 
       .slop-frog-panel-head strong {
@@ -786,6 +1208,31 @@
         box-shadow:
           0 6px 16px color-mix(in oklch, black 22%, transparent),
           inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+      }
+
+      .slop-frog-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: grid;
+        width: 22px;
+        min-width: 22px;
+        height: 22px;
+        min-height: 22px;
+        place-items: center;
+        padding: 0 !important;
+        border-radius: 999px !important;
+        color: oklch(87% 0.055 154) !important;
+        background: color-mix(in oklch, white 7%, transparent) !important;
+        border-color: color-mix(in oklch, white 14%, transparent) !important;
+        box-shadow: none !important;
+        font-size: 16px !important;
+        line-height: 1 !important;
+      }
+
+      .slop-frog-close:hover {
+        color: oklch(98% 0.012 154) !important;
+        background: color-mix(in oklch, white 13%, transparent) !important;
       }
 
       article.slop-frog-filtered > *:not(.slop-frog-filter-card) {

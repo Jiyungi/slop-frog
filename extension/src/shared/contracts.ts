@@ -1,4 +1,4 @@
-export type Platform = "x";
+export type Platform = "x" | "linkedin";
 
 export type FlagLabel = "red" | "yellow" | "green" | "gray";
 

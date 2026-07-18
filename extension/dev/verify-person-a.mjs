@@ -7,6 +7,14 @@ const manifest = readJson("manifest.json");
 
 assert(manifest.manifest_version === 3, "manifest is MV3");
 assert(!JSON.stringify(manifest).includes("<all_urls>"), "manifest avoids all_urls");
+for (const host of ["linkedin.com"]) {
+  assert(JSON.stringify(manifest.host_permissions).includes(host), `manifest permits ${host}`);
+  assert(JSON.stringify(manifest.content_scripts).includes(host), `content script matches ${host}`);
+}
+for (const host of ["reddit.com", "facebook.com"]) {
+  assert(!JSON.stringify(manifest.host_permissions).includes(host), `manifest excludes ${host}`);
+  assert(!JSON.stringify(manifest.content_scripts).includes(host), `content script excludes ${host}`);
+}
 
 const manifestRefs = [
   manifest.background.service_worker,
@@ -56,6 +64,18 @@ assert(
   "content script scans X tweet articles"
 );
 assert(
+  contentScript.includes('platform: "linkedin"') &&
+    !contentScript.includes('platform: "reddit"') &&
+    !contentScript.includes('platform: "facebook"'),
+  "content script is focused on X and LinkedIn adapters"
+);
+assert(
+  contentScript.includes("findLinkedInPosts") &&
+    contentScript.includes("getLinkedInText") &&
+    contentScript.includes(".feed-shared-update-v2"),
+  "LinkedIn adapter uses robust feed-card detection"
+);
+assert(
   contentScript.includes('"SLOP_FROG_SUBMIT_VOTE"'),
   "feedback panel sends vote action"
 );
@@ -64,12 +84,20 @@ assert(
   "appeal panel sends appeal action"
 );
 assert(
-  contentScript.includes('label: "Scoring"'),
-  "pending detector state shows Scoring, not Gray"
+  contentScript.includes('icon: iconVerdictFlag("loading")'),
+  "pending detector state shows icon-only loading flag"
 );
 assert(
-  contentScript.includes("actionGroup.parentElement.after(mount)"),
-  "controls render after X action row"
+  contentScript.includes('slot.className = "slop-frog-slot"') &&
+    contentScript.includes("activeAdapter?.findInsertionPoint(article)") &&
+    contentScript.includes('insertAdjacentElement("afterend", slot)'),
+  "controls render through platform insertion points"
+);
+assert(
+  contentScript.includes("iconVerdictFlag(result.label)") &&
+    contentScript.includes("iconFrogFeedback()") &&
+    contentScript.includes("iconAppealScale()"),
+  "compact controls use branded icon-only actions"
 );
 assert(
   contentScript.includes("function el(tag, props = {}, ...children)"),
@@ -78,6 +106,16 @@ assert(
 assert(
   sliceFunction(contentScript, "createEvidencePanel").includes('"Slop Score"'),
   "evidence panel renders Slop Score row"
+);
+assert(
+  contentScript.includes("createPanelCloseButton") &&
+    contentScript.includes('close.textContent = "×"'),
+  "panels include a close button"
+);
+assert(
+  contentScript.includes("closePanelsOnEscape") &&
+    contentScript.includes('event.key !== "Escape"'),
+  "panels can close with Escape"
 );
 assert(
   !sliceFunction(contentScript, "createEvidencePanel").includes("Looks AI"),
