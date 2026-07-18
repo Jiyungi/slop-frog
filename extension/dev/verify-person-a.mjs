@@ -64,6 +64,14 @@ assert(
   "appeal panel sends appeal action"
 );
 assert(
+  contentScript.includes("function el(tag, props = {}, ...children)"),
+  "DOM helper accepts multiple children"
+);
+assert(
+  sliceFunction(contentScript, "createEvidencePanel").includes('"Slop Score"'),
+  "evidence panel renders Slop Score row"
+);
+assert(
   !sliceFunction(contentScript, "createEvidencePanel").includes("Looks AI"),
   "evidence panel does not contain feedback choices"
 );
