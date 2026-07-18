@@ -31,7 +31,7 @@ No task may be marked complete until its verification step has passed. Code exis
 
 - [x] 2. Define shared contracts before parallel work (Owner: Both)
   - [x] 2.1 Define the shared TypeScript contracts
-    - Create `extension/src/shared/contracts.ts` containing `PostEnvelope`, `ScoreRequest`, `ScoreResponse`, `CommunityAggregate`, `CompositeResult`, `FlagLabel`, and `ExtensionSettings`.
+    - Create `extension/src/shared/contracts.ts` containing `PostEnvelope`, `ScoreRequest`, `ScoreResponse`, `CommunityAggregate`, `SlopScoreResult`, `FlagLabel`, and `ExtensionSettings`.
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
     - **Verification:** The file exports all required types and includes only the four allowed labels: `red`, `yellow`, `green`, `gray`.
 
@@ -100,8 +100,8 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 1.5, 3.7_
     - **Verification:** The same `contentKey` is not sent to the detector repeatedly during one scroll session.
 
-  - [ ] 7.3 Compute composite result
-    - Implement local composite calculation using detector score and optional community aggregate.
+  - [ ] 7.3 Compute Slop Score result
+    - Implement local Slop Score calculation using detector score and optional community aggregate.
     - _Requirements: 5.1, 6.1, 6.2, 6.3, 6.4_
     - **Verification:** Fixture scores produce expected red, yellow, green, and gray labels.
 
@@ -112,7 +112,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** At least three X posts show stable flags while scrolling and no text overlaps post content.
 
   - [ ] 8.2 Render evidence panel
-    - Show detector score, composite score, community score, modality rows, gray reason, vote buttons, appeal action, and simple history area.
+    - Show detector score, Slop Score, community score, modality rows, gray reason, vote buttons, appeal action, and simple history area.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
     - **Verification:** Clicking a flag opens the panel and all required sections render from fixture data.
 
@@ -123,12 +123,12 @@ No task may be marked complete until its verification step has passed. Code exis
 
 - [ ] 9. Implement evidence charts in UI (Owner: Person A)
   - [ ] 9.1 Add longitudinal score graph
-    - Render time on x-axis and composite score on y-axis using verdict history.
+    - Render time on x-axis and Slop Score on y-axis using verdict history.
     - _Requirements: 13.1, 13.2_
     - **Verification:** Mock verdict history renders a visible chart inside the evidence panel.
 
   - [ ] 9.2 Add volume vs score graph
-    - Render review/repost volume on x-axis and composite score on y-axis.
+    - Render review/repost volume on x-axis and Slop Score on y-axis.
     - _Requirements: 13.3, 13.4, 13.5_
     - **Verification:** Mock volume history renders a visible chart inside the evidence panel.
 

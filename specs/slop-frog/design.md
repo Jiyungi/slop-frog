@@ -2,7 +2,7 @@
 
 ## Overview
 
-Slop Frog is a local-first Chrome extension for X. The extension observes visible posts while the user scrolls, extracts a normalized `Post_Envelope`, sends it to a detector running on the user's laptop, fetches community label aggregates from Supabase, computes a composite result, and inserts a simple flag into the X feed.
+Slop Frog is a local-first Chrome extension for X. The extension observes visible posts while the user scrolls, extracts a normalized `Post_Envelope`, sends it to a detector running on the user's laptop, fetches community label aggregates from Supabase, computes a Slop Score result, and inserts a simple flag into the X feed.
 
 The design is optimized for a three-hour hackathon build by two people. The first phase creates shared contracts that both people must honor. After those contracts are verified, Person A owns the Chrome extension and in-feed UX while Person B owns the local detector service and Supabase community layer. The final integration phase joins both tracks and verifies the demo.
 
@@ -44,7 +44,7 @@ graph TD
     BG --> SB[Supabase Community API]
     Local --> Score[Detector_Score + Evidence_Coverage]
     SB --> Community[Community_Aggregate + Verdict_History]
-    Score --> Compose[Composite Engine]
+    Score --> Compose[Slop Score Engine]
     Community --> Compose
     Compose --> UI[Flag UI + Evidence Panel]
     UI --> X
@@ -133,13 +133,13 @@ interface CommunityAggregate {
 }
 ```
 
-### `Composite_Result`
+### `Slop_Score_Result`
 
 ```ts
-interface CompositeResult {
+interface SlopScoreResult {
   contentKey: string;
   label: FlagLabel;
-  compositeScore: number | null;
+  slopScore: number | null;
   detectorScore: number | null;
   communityScore: number | null;
   evidenceCoverage: number;
@@ -172,18 +172,18 @@ The heuristic fallback exists only so integration and UI can be verified before 
 
 The Background_Worker requests the community aggregate for `contentKey` from Supabase. If Supabase is unavailable, the extension still displays the local detector result and marks community data unavailable in the Evidence_Panel.
 
-### 4. Composite scoring
+### 4. Slop Score calculation
 
-The composite engine runs locally in the extension:
+The Slop Score engine runs locally in the extension:
 
 ```text
 if score_response.labelRecommendation == "gray":
   label = "gray"
 else:
   communityScore = aggregate.weightedAiScore if available
-  compositeScore = 0.75 * detectorScore + 0.25 * communityScore
-  if communityScore is missing: compositeScore = detectorScore
-  label = threshold(compositeScore)
+  slopScore = 0.75 * detectorScore + 0.25 * communityScore
+  if communityScore is missing: slopScore = detectorScore
+  label = threshold(slopScore)
 ```
 
 Default thresholds:
@@ -215,7 +215,7 @@ extension/
       index.ts
       localDetectorClient.ts
       supabaseClient.ts
-      composite.ts
+      slopScore.ts
       cache.ts
     popup/
       popup.html
@@ -281,7 +281,7 @@ Responsibilities:
 - deduplicate by `contentKey`;
 - call local detector;
 - call Supabase;
-- compute composite result;
+- compute Slop Score result;
 - cache results;
 - send final result back to content script.
 
@@ -391,7 +391,7 @@ id uuid primary key default gen_random_uuid(),
 content_key text references content_items(content_key),
 event_type text not null,
 label text check (label in ('red', 'yellow', 'green', 'gray')),
-composite_score numeric,
+slop_score numeric,
 detector_score numeric,
 community_score numeric,
 metadata jsonb,
@@ -430,7 +430,7 @@ For the MVP, this entire lane is inactive. No backend job fetches X posts. No sc
 
 - Validate fixture `Post_Envelope` objects.
 - Validate `Score_Request` and `Score_Response`.
-- Validate composite thresholds.
+- Validate Slop Score thresholds.
 - Validate gray vs green distinction.
 
 ### Extension verification
@@ -467,7 +467,7 @@ For the MVP, this entire lane is inactive. No backend job fetches X posts. No sc
 - Confirm extension extracts posts.
 - Confirm detector returns scores.
 - Confirm community aggregate is fetched.
-- Confirm composite labels render.
+- Confirm Slop Score labels render.
 - Confirm one vote reaches Supabase.
 - Confirm one red post can be auto-filtered.
 

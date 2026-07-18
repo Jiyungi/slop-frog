@@ -23,7 +23,7 @@ Three rules are non-negotiable and shape every requirement below:
 - **Detector_Score**: A 0 to 100 AI evidence score returned by the Local_Detector_Service.
 - **Evidence_Coverage**: A pre-score signal indicating whether there is enough usable evidence to responsibly produce a red, yellow, or green label.
 - **Gray_Flag**: The no-signal state used when Evidence_Coverage is too low, extraction fails, or the local detector is unavailable.
-- **Composite_Score**: The final 0 to 100 score computed from local detector output and community aggregate data.
+- **Slop_Score**: The final 0 to 100 score computed from local detector output and community aggregate data.
 - **Community_Label**: A user-submitted judgment that content looks AI-generated/AI-assisted, mostly human, or unsure.
 - **Reviewer_Reputation**: A weight applied to a community reviewer based on prior review count, agreement with final labels, and appeal outcomes.
 - **Content_Fingerprint**: A stable identifier for repost recognition, including normalized text hash and optional media hashes.
@@ -52,7 +52,7 @@ Three rules are non-negotiable and shape every requirement below:
 
 #### Acceptance Criteria
 
-1. THE team SHALL define `Post_Envelope`, `Score_Request`, `Score_Response`, `Community_Aggregate`, `Composite_Result`, `Flag_Label`, and `Extension_Settings` before Person A and Person B split implementation work.
+1. THE team SHALL define `Post_Envelope`, `Score_Request`, `Score_Response`, `Community_Aggregate`, `Slop_Score_Result`, `Flag_Label`, and `Extension_Settings` before Person A and Person B split implementation work.
 2. THE shared contracts SHALL be stored in a shared package or copied contract file that both the extension and local detector can import or mirror exactly.
 3. THE shared contracts SHALL define the allowed Flag_Label values as `red`, `yellow`, `green`, and `gray`.
 4. THE shared contracts SHALL define the localhost detector endpoint as `POST /score`.
@@ -103,20 +103,20 @@ Three rules are non-negotiable and shape every requirement below:
 5. THE Slop_Frog_System SHALL distinguish gray from yellow: gray means not enough signal; yellow means enough signal but mixed or medium AI evidence.
 6. THE Evidence_Panel SHALL show the gray reason when the label is gray.
 
-### Requirement 6: Composite score and flags
+### Requirement 6: Slop Score and flags
 
 **User Story:** As a user, I want one simple feed flag rather than many probabilities, so that I can understand the result while scrolling.
 
 #### Acceptance Criteria
 
-1. THE Slop_Frog_System SHALL compute a Composite_Score when Evidence_Coverage is sufficient.
-2. THE Composite_Score SHALL combine local detector score and Supabase community aggregate when community aggregate exists.
-3. IF no community aggregate exists, THEN THE Composite_Score SHALL be allowed to equal the local detector score for the MVP.
+1. THE Slop_Frog_System SHALL compute a Slop_Score when Evidence_Coverage is sufficient.
+2. THE Slop_Score SHALL combine local detector score and Supabase community aggregate when community aggregate exists.
+3. IF no community aggregate exists, THEN THE Slop_Score SHALL be allowed to equal the local detector score for the MVP.
 4. THE default flag thresholds SHALL be red above 75, yellow from 40 to 75 inclusive, and green below 40.
 5. THE thresholds SHALL be stored in configuration, not hard-coded across unrelated modules.
 6. THE extension SHALL display the flag on the corresponding X_Post.
 7. THE default feed UI SHALL show the flag label without requiring the exact numeric score.
-8. IF the user enables numeric scores, THEN THE extension SHALL show the Composite_Score in the Evidence_Panel or compact flag UI.
+8. IF the user enables numeric scores, THEN THE extension SHALL show the Slop_Score in the Evidence_Panel or compact flag UI.
 
 ### Requirement 7: Auto-filtering
 
@@ -137,7 +137,7 @@ Three rules are non-negotiable and shape every requirement below:
 #### Acceptance Criteria
 
 1. THE extension SHALL provide an expandable Evidence_Panel for each labeled post.
-2. THE Evidence_Panel SHALL show the Composite_Score when available.
+2. THE Evidence_Panel SHALL show the Slop_Score when available.
 3. THE Evidence_Panel SHALL show the Detector_Score when available.
 4. THE Evidence_Panel SHALL show community aggregate when available.
 5. THE Evidence_Panel SHALL show separate modality rows for text, image, audio, and video, with unsupported modalities marked unavailable.
@@ -206,9 +206,9 @@ Three rules are non-negotiable and shape every requirement below:
 #### Acceptance Criteria
 
 1. THE Evidence_Panel or reviewer view SHALL include a longitudinal score graph.
-2. The longitudinal graph SHALL use time on the x-axis and Composite_Score on the y-axis.
+2. The longitudinal graph SHALL use time on the x-axis and Slop_Score on the y-axis.
 3. THE Evidence_Panel or reviewer view SHALL include a volume vs score graph.
-4. The volume graph SHALL use review or repost volume on the x-axis and Composite_Score on the y-axis.
+4. The volume graph SHALL use review or repost volume on the x-axis and Slop_Score on the y-axis.
 5. THE MVP MAY render simplified SVG or canvas graphs using local mock history if live history is unavailable.
 
 ### Requirement 14: Permissions and installation

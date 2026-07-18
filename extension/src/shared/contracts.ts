@@ -82,10 +82,10 @@ export interface CommunityAggregate {
   updatedAt?: string;
 }
 
-export interface CompositeResult {
+export interface SlopScoreResult {
   contentKey: string;
   label: FlagLabel;
-  compositeScore: number | null;
+  slopScore: number | null;
   detectorScore: number | null;
   communityScore: number | null;
   evidenceCoverage: number;

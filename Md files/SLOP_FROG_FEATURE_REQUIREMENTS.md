@@ -35,9 +35,9 @@ For the MVP, do not call this a guaranteed probability unless the detector has b
 
 Slop Frog should use simple flags:
 
-- **Red flag:** composite score above 75. This means strong AI evidence.
-- **Yellow flag:** composite score from 40 to 75. This means mixed or uncertain AI evidence.
-- **Green flag:** composite score below 40. This means low AI evidence.
+- **Red flag:** Slop Score above 75. This means strong AI evidence.
+- **Yellow flag:** Slop Score from 40 to 75. This means mixed or uncertain AI evidence.
+- **Green flag:** Slop Score below 40. This means low AI evidence.
 
 These thresholds should be adjustable later as the product collects more data.
 
@@ -66,7 +66,7 @@ if evidence_coverage < 50:
   label = "gray"
   reason = "not enough signal"
 else:
-  calculate composite score
+  calculate Slop Score
 ```
 
 Recommended MVP evidence coverage rules:
@@ -95,7 +95,7 @@ Do not force the MVP to classify content into hard categories like "AI-generated
 
 Those categories are not always mutually exclusive. A human post can be lightly AI-edited. An AI-generated image can be posted with human-written commentary. A video can contain human footage with AI voiceover.
 
-For the MVP, Slop Frog should use one simple composite score plus modality-level evidence. The product can say:
+For the MVP, Slop Frog should use one simple Slop Score plus modality-level evidence. The product can say:
 
 - "Text shows strong AI evidence."
 - "Image shows low AI evidence."
@@ -206,11 +206,11 @@ Example:
 | Audio | N/A | Not available |
 | Video | N/A | Not available |
 
-### 5. Composite score
+### 5. Slop Score
 
-Slop Frog must combine model detection and community input into one composite score.
+Slop Frog must combine model detection and community input into one Slop Score.
 
-The composite score should be the main score used for red, yellow, and green flags.
+The Slop Score should be the main score used for red, yellow, and green flags.
 
 Minimum MVP inputs:
 
@@ -223,7 +223,7 @@ Minimum MVP inputs:
 Simple MVP formula:
 
 ```text
-composite_score =
+slop_score =
   detector_weight * detector_score
   + community_weight * weighted_community_score
   + provenance_adjustment
@@ -232,7 +232,7 @@ composite_score =
 
 The exact weights can be tuned later. For the first version, start simple and make the weights visible to the team in configuration.
 
-Important rule: if there is not enough evidence, the system should return "not enough signal" instead of forcing a composite score.
+Important rule: if there is not enough evidence, the system should return "not enough signal" instead of forcing a Slop Score.
 
 ### 6. Simple flag UI
 
@@ -247,7 +247,7 @@ Default feed view:
 
 Optional expanded view:
 
-- exact composite score;
+- exact Slop Score;
 - detector score;
 - community score;
 - modality scores;
@@ -265,7 +265,7 @@ Default:
 
 Optional:
 
-- show the composite score;
+- show the Slop Score;
 - show modality scores;
 - show model and community contribution.
 
@@ -273,7 +273,7 @@ This keeps the product usable for normal users while still giving power users an
 
 ### 8. Auto-filter high-risk content
 
-Users must be able to auto-filter content with a high composite score.
+Users must be able to auto-filter content with a high Slop Score.
 
 For the MVP, keep this simple:
 
@@ -332,7 +332,7 @@ Slop Frog must let users expand a flag and see why the label exists.
 
 The evidence panel should show:
 
-- composite score;
+- Slop Score;
 - detector score;
 - community score;
 - separate modality scores;
@@ -356,7 +356,7 @@ For the MVP, provenance checking can be basic:
 - detect whether C2PA Content Credentials exist;
 - show whether provenance is present, missing, or unclear.
 
-Provenance should influence the evidence panel and may influence the composite score, but it should not automatically decide the final label.
+Provenance should influence the evidence panel and may influence the Slop Score, but it should not automatically decide the final label.
 
 Important rules:
 
@@ -430,8 +430,8 @@ Events to store:
 
 Required charts:
 
-- **Longitudinal score graph:** x-axis is time, y-axis is composite score.
-- **Volume vs score graph:** x-axis is review or repost volume, y-axis is composite score.
+- **Longitudinal score graph:** x-axis is time, y-axis is Slop Score.
+- **Volume vs score graph:** x-axis is review or repost volume, y-axis is Slop Score.
 
 This lets users and judges see whether a label became stronger, weaker, or more contested over time.
 
@@ -454,7 +454,7 @@ Slop Frog should include a simple dashboard for reviewing flagged content and ap
 Minimum dashboard features:
 
 - list flagged content;
-- sort by highest composite score;
+- sort by highest Slop Score;
 - sort by most appealed;
 - sort by most reviewed;
 - view evidence panel;
@@ -490,7 +490,7 @@ These features are useful, but they should not be part of the first build unless
 7. Add automatic filtering for red-flagged content.
 8. Add community voting.
 9. Add reputation-weighted community scoring.
-10. Add composite score calculation.
+10. Add Slop Score calculation.
 11. Add evidence panel.
 12. Add simple provenance detection for visible or fetched media when available.
 13. Add content fingerprinting and verdict inheritance.

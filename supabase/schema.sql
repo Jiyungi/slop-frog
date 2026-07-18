@@ -46,7 +46,7 @@ create table if not exists public.verdict_history (
   content_key text not null references public.content_items(content_key) on delete cascade,
   event_type text not null,
   label text check (label in ('red', 'yellow', 'green', 'gray')),
-  composite_score numeric check (composite_score is null or (composite_score >= 0 and composite_score <= 100)),
+  slop_score numeric check (slop_score is null or (slop_score >= 0 and slop_score <= 100)),
   detector_score numeric check (detector_score is null or (detector_score >= 0 and detector_score <= 100)),
   community_score numeric check (community_score is null or (community_score >= 0 and community_score <= 100)),
   metadata jsonb not null default '{}'::jsonb,
