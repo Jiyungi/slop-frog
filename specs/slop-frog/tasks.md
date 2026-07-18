@@ -143,7 +143,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 4.1, 4.2, 4.3_
     - **Verification:** `GET /health` returns ok on `http://localhost:8765/health`.
 
-  - [ ] 10.2 Implement schema validation
+  - [x] 10.2 Implement schema validation
     - Validate incoming `ScoreRequest` against the shared contract shape.
     - _Requirements: 2.1, 4.4, 4.5_
     - **Verification:** Valid fixture requests pass; malformed requests return typed errors.
