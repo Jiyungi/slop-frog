@@ -165,7 +165,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** Simulated model failure returns a JSON error response and does not hang.
 
 - [ ] 12. Implement Supabase community layer (Owner: Person B)
-  - [ ] 12.1 Apply or validate Supabase schema
+  - [x] 12.1 Apply or validate Supabase schema
     - Create the required tables and aggregate view.
     - _Requirements: 9.1, 10.1, 12.4_
     - **Verification:** A SQL check confirms required tables exist, or local schema review is completed if Supabase credentials are unavailable.
