@@ -187,7 +187,14 @@ class LocalDetectorScorer:
                 message = f"The local detector model is unavailable: {self._load_error}"
             return ErrorResponse(errorCode="model_unavailable", message=message)
 
-        detector_score = self._runtime.score(request.post.normalizedText)
+        try:
+            detector_score = self._runtime.score(request.post.normalizedText)
+        except Exception:
+            return ErrorResponse(
+                errorCode="internal_failure",
+                message="The local detector failed while scoring the request.",
+            )
+
         return ScoreResponse(
             ok=True,
             detectorScore=detector_score,

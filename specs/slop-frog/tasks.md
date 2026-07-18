@@ -159,7 +159,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - _Requirements: 4.4, 4.5, 4.8_
     - **Verification:** Medium and high-risk fixtures return stable numeric detector scores within 0 to 100.
 
-  - [ ] 11.3 Implement local detector error handling
+  - [x] 11.3 Implement local detector error handling
     - Return typed errors for model unavailable, invalid request, and internal failure.
     - _Requirements: 4.7, 14.5_
     - **Verification:** Simulated model failure returns a JSON error response and does not hang.

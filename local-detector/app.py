@@ -57,5 +57,6 @@ def score(request: ScoreRequest) -> ScoreResponse | JSONResponse:
 
     result = scorer.score(request)
     if isinstance(result, ErrorResponse):
-        return JSONResponse(status_code=503, content=result.model_dump(mode="json"))
+        status_code = 503 if result.errorCode == "model_unavailable" else 500
+        return JSONResponse(status_code=status_code, content=result.model_dump(mode="json"))
     return result
