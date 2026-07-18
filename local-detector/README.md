@@ -25,10 +25,11 @@ Verify it in another terminal:
 curl http://localhost:8765/health
 ```
 
-`GET /health` reports `model_loaded: true` once the local model is ready. A
-valid `POST /score` request with at least 20 words receives the Imbue Qwen
-four-bucket expected-value score converted to the shared 0–100 scale. Shorter
-text remains gray with `not_enough_signal`.
+`GET /health` reports `model_loaded: true` only after the local model has loaded
+and completed its one-time Apple Metal warmup. A valid `POST /score` request
+with at least 20 words then receives the Imbue Qwen four-bucket expected-value
+score converted to the shared 0–100 scale. Shorter text remains gray with
+`not_enough_signal`.
 
 ## Shared constants
 

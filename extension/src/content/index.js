@@ -466,7 +466,7 @@
         el("span", { className: `slop-frog-dot is-${result.label}` }, "")
       ),
       scoreRow("Slop Score", formatScore(result.slopScore)),
-      scoreRow("Local detector", formatScore(result.detectorScore)),
+      scoreRow("Detector score", formatScore(result.detectorScore)),
       scoreRow(
         "Community",
         community?.weightedAiScore === null || !community

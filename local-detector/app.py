@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from threading import Lock
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,13 +12,18 @@ SERVICE_NAME = "slop-frog-local-detector"
 SERVICE_VERSION = "0.1.0"
 
 scorer = LocalDetectorScorer()
+# Apple MPS inference is not re-entrant. Feed scans can discover several posts
+# in one mutation batch, so serialize the model calls instead of allowing a
+# concurrent Metal command buffer to fail the whole detector process.
+score_lock = Lock()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """Initialize the local model once so score requests stay under demo latency."""
 
-    scorer.load_model()
+    if scorer.load_model():
+        scorer.warmup()
     yield
 
 
@@ -55,7 +61,8 @@ def health() -> HealthResponse:
 def score(request: ScoreRequest) -> ScoreResponse | JSONResponse:
     """Return a gray result before model inference when evidence is too sparse."""
 
-    result = scorer.score(request)
+    with score_lock:
+        result = scorer.score(request)
     if isinstance(result, ErrorResponse):
         status_code = 503 if result.errorCode == "model_unavailable" else 500
         return JSONResponse(status_code=status_code, content=result.model_dump(mode="json"))

@@ -13,6 +13,10 @@ from schemas import (
 WORDS_FOR_FULL_TEXT_COVERAGE = 20
 MODEL_MAX_LENGTH = 1024
 MODEL_REVISION = "1122ecd1b1b19ee0b147e862f204acdc1ad98dc3"
+WARMUP_TEXT = (
+    "This local startup warmup runs one ordinary sentence through the detector so "
+    "Apple Metal compiles its kernels before the extension sends a real post."
+)
 
 
 @dataclass(frozen=True)
@@ -145,6 +149,25 @@ class LocalDetectorScorer:
         self._runtime = runtime
         self._load_error = None
         self.model_loaded = True
+        return True
+
+    def warmup(self) -> bool:
+        """Compile the MPS inference path before reporting the detector as ready."""
+
+        if self._runtime is None:
+            self.model_loaded = False
+            self._load_error = "The local detector model has not been initialized yet."
+            return False
+
+        try:
+            self._runtime.score(WARMUP_TEXT)
+        except Exception as exception:
+            self.model_loaded = False
+            self._load_error = str(exception)
+            return False
+
+        self.model_loaded = True
+        self._load_error = None
         return True
 
     @staticmethod

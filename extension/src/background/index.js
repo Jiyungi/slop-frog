@@ -11,6 +11,7 @@ const memoryCache = new Map();
 const SUPABASE_CONFIG_STORAGE_KEY = "slopFrog.supabaseConfig";
 const SUPABASE_LOCAL_CONFIG_PATH = "src/shared/supabase-config.local.json";
 const SUPPORTED_PLATFORMS = new Set(["x", "linkedin"]);
+const DETECTOR_SCORE_TIMEOUT_MS = 20_000;
 let supabaseConfigPromise;
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -208,7 +209,7 @@ async function fetchDetectorHealth(localDetectorUrl) {
 
 async function callLocalDetector(post, settings) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4200);
+  const timeoutId = setTimeout(() => controller.abort(), DETECTOR_SCORE_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${trimSlash(settings.localDetectorUrl)}/score`, {

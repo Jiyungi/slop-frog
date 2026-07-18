@@ -108,6 +108,10 @@ assert(
   "evidence panel renders Slop Score row"
 );
 assert(
+  sliceFunction(contentScript, "createEvidencePanel").includes('"Detector score"'),
+  "evidence panel renders detector score row"
+);
+assert(
   contentScript.includes("createPanelCloseButton") &&
     contentScript.includes('close.textContent = "×"'),
   "panels include a close button"

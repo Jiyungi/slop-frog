@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -108,6 +108,22 @@ try {
     "The extension background worker did not start."
   );
 
+  if (process.env.SLOP_FROG_EXPECT_DETECTOR) {
+    assert(
+      parsedPopupState.detector === process.env.SLOP_FROG_EXPECT_DETECTOR,
+      `Expected detector ${process.env.SLOP_FROG_EXPECT_DETECTOR}, got ${parsedPopupState.detector}.`
+    );
+  }
+
+  const scoreVerification =
+    process.env.SLOP_FROG_VERIFY_SCORE === "1"
+      ? await verifyBackgroundScoring(attached.sessionId)
+      : null;
+  const communityVerification =
+    process.env.SLOP_FROG_VERIFY_SUPABASE === "1"
+      ? await verifyCommunityActions(attached.sessionId)
+      : null;
+
   console.log(
     JSON.stringify(
       {
@@ -116,6 +132,8 @@ try {
         community: parsedPopupState.community,
         detectorEndpoint: parsedPopupState.endpoint,
         autoFilterPersisted: parsedSavedState.persisted,
+        scoreVerification,
+        communityVerification,
       },
       null,
       2
@@ -123,7 +141,13 @@ try {
   );
 } finally {
   chrome.kill("SIGTERM");
-  rmSync(profilePath, { recursive: true, force: true });
+  await wait(400);
+  try {
+    rmSync(profilePath, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    // A terminating Chrome helper can briefly retain the isolated test profile.
+    // It contains no project data and does not affect the result of this check.
+  }
 }
 
 function command(method, params = {}, sessionId) {
@@ -146,6 +170,139 @@ async function evaluate(sessionId, expression, awaitPromise = false) {
     throw new Error(result.exceptionDetails.text || "Popup evaluation failed.");
   }
   return result.result.value;
+}
+
+async function verifyBackgroundScoring(sessionId) {
+  const fixtures = JSON.parse(
+    readFileSync(path.join(repositoryRoot, "extension/src/shared/fixtures.json"), "utf8")
+  );
+  const timestamp = Date.now();
+  const posts = fixtures.map((fixture) => ({
+    ...fixture.post,
+    contentKey: `x:cdp-score-${timestamp}-${fixture.name}`,
+    tweetId: `cdp-score-${timestamp}-${fixture.name}`,
+    textHash: `cdp-score-${timestamp}-${fixture.name}`,
+  }));
+  const directDetectorResponse = JSON.parse(
+    await evaluate(
+      sessionId,
+      `fetch("http://localhost:8765/score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post: ${JSON.stringify(posts[1])}, settings: {
+          evidenceCoverageMinimum: 50,
+          redThreshold: 75,
+          yellowThreshold: 40
+        }})
+      }).then(async (response) => JSON.stringify({
+        status: response.status,
+        body: await response.json()
+      })).catch((error) => JSON.stringify({ error: error.message, name: error.name }))`,
+      true
+    )
+  );
+  assert(
+    directDetectorResponse.status === 200,
+    `Direct extension detector request failed: ${JSON.stringify(directDetectorResponse)}.`
+  );
+  const scores = await sendExtensionMessages(
+    sessionId,
+    posts.map((post) => ({ type: "SLOP_FROG_SCORE_POST", post }))
+  );
+
+  for (const [index, fixture] of fixtures.entries()) {
+    assert(scores[index]?.ok, `Scoring ${fixture.name} did not return an extension response.`);
+    assert(
+      scores[index]?.result?.label === fixture.expectedLabel,
+      `${fixture.name} expected ${fixture.expectedLabel}, got ${JSON.stringify(scores[index]?.result)}.`
+    );
+  }
+
+  const duplicate = await sendExtensionMessages(sessionId, [
+    { type: "SLOP_FROG_SCORE_POST", post: posts[1] },
+  ]);
+  assert(
+    JSON.stringify(duplicate[0]) === JSON.stringify(scores[1]),
+    "The same content key did not return the cached scoring response."
+  );
+
+  const linkedInPost = {
+    ...posts[1],
+    platform: "linkedin",
+    contentKey: `linkedin:cdp-score-${timestamp}`,
+    tweetId: undefined,
+    url: `https://www.linkedin.com/feed/update/urn:li:activity:${timestamp}/`,
+  };
+  const linkedInScore = await sendExtensionMessages(sessionId, [
+    { type: "SLOP_FROG_SCORE_POST", post: linkedInPost },
+  ]);
+  assert(linkedInScore[0]?.ok, "LinkedIn post did not return an extension score response.");
+  assert(
+    linkedInScore[0]?.result?.label === fixtures[1].expectedLabel,
+    `LinkedIn score was unexpected: ${JSON.stringify(linkedInScore[0]?.result)}.`
+  );
+
+  return {
+    labels: scores.map((score) => score.result.label),
+    cachedContentKey: posts[1].contentKey,
+    linkedInLabel: linkedInScore[0].result.label,
+  };
+}
+
+async function verifyCommunityActions(sessionId) {
+  const timestamp = Date.now();
+  const post = {
+    platform: "x",
+    contentKey: `x:cdp-community-${timestamp}`,
+    tweetId: `cdp-community-${timestamp}`,
+    url: `https://x.com/slopfrog/status/${timestamp}`,
+    authorHandle: "slopfrog",
+    visibleText:
+      "This is an explicit community-action integration fixture with enough text to preserve a complete post identity for the vote and appeal path.",
+    normalizedText:
+      "this is an explicit community-action integration fixture with enough text to preserve a complete post identity for the vote and appeal path.",
+    textHash: `cdp-community-${timestamp}`,
+    imageUrls: [],
+    extractedAt: new Date().toISOString(),
+  };
+  const [vote] = await sendExtensionMessages(sessionId, [
+    {
+      type: "SLOP_FROG_SUBMIT_VOTE",
+      payload: { contentKey: post.contentKey, vote: "looks_ai", post },
+    },
+  ]);
+  const [appeal] = await sendExtensionMessages(sessionId, [
+    {
+      type: "SLOP_FROG_SUBMIT_APPEAL",
+      payload: {
+        contentKey: post.contentKey,
+        reason: "context_missing",
+        status: "submitted",
+        post,
+      },
+    },
+  ]);
+  assert(vote?.ok, `Community vote failed: ${vote?.error || "unknown error"}.`);
+  assert(vote?.communityAggregate, "Vote did not return a community aggregate.");
+  assert(appeal?.ok, `Appeal failed: ${appeal?.error || "unknown error"}.`);
+  assert(appeal?.savedAppeal?.id, "Appeal did not return a saved appeal ID.");
+
+  return {
+    contentKey: post.contentKey,
+    aggregate: vote.communityAggregate,
+    appealId: appeal.savedAppeal.id,
+  };
+}
+
+async function sendExtensionMessages(sessionId, messages) {
+  const result = await evaluate(
+    sessionId,
+    `Promise.all(${JSON.stringify(messages)}.map((message) => new Promise((resolve) => {
+      chrome.runtime.sendMessage(message, resolve);
+    }))).then(JSON.stringify)`,
+    true
+  );
+  return JSON.parse(result);
 }
 
 function wait(milliseconds) {
