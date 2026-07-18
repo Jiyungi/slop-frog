@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slop Frog</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Slop Frog</h1>
+          <p>X trust layer</p>
+        </div>
+        <span class="frog" aria-hidden="true">◖•◗</span>
+      </header>
+
+      <section class="status-list" aria-label="Connection status">
+        <div class="status-row">
+          <span>Local detector</span>
+          <strong id="detectorStatus">Checking</strong>
+        </div>
+        <div class="status-row">
+          <span>Supabase</span>
+          <strong id="supabaseStatus">Pending</strong>
+        </div>
+      </section>
+
+      <section class="toggles" aria-label="Settings">
+        <label>
+          <span>Show Slop Score</span>
+          <input id="showNumericScore" type="checkbox" />
+        </label>
+        <label>
+          <span>Auto-filter red</span>
+          <input id="autoFilterRed" type="checkbox" />
+        </label>
+      </section>
+
+      <label class="url-field">
+        <span>Detector URL</span>
+        <input id="localDetectorUrl" spellcheck="false" />
+      </label>
+
+      <p id="hint" class="hint" role="status"></p>
+    </main>
+
+    <script src="../shared/runtime.js"></script>
+    <script src="./popup.js"></script>
+  </body>
+</html>
