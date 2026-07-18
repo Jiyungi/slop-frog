@@ -8,6 +8,8 @@
   let scanTimer;
   let stopped = false;
 
+  window.addEventListener("error", suppressInvalidatedContextError, true);
+  window.addEventListener("unhandledrejection", suppressInvalidatedContextError, true);
   injectStyles();
   queueMicrotask(() => {
     boot().catch(() => {
@@ -24,8 +26,8 @@
     scanVisiblePosts();
     observer = new MutationObserver(queueScan);
     observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("scroll", queueScan, { passive: true });
-    document.addEventListener("keydown", closePanelsOnEscape);
+    window.addEventListener("scroll", guardedEvent(queueScan), { passive: true });
+    document.addEventListener("keydown", guardedEvent(closePanelsOnEscape));
   }
 
   async function getSettings() {
@@ -610,11 +612,11 @@
     control.setAttribute("aria-label", title);
     control.append(icon);
     if (label) control.append(el("span", {}, label));
-    control.addEventListener("click", (event) => {
+    control.addEventListener("click", guardedEvent((event) => {
       event.preventDefault();
       event.stopPropagation();
       onClick();
-    });
+    }));
     return control;
   }
 
@@ -625,11 +627,11 @@
     close.title = "Close";
     close.setAttribute("aria-label", "Close Slop Frog panel");
     close.textContent = "×";
-    close.addEventListener("click", (event) => {
+    close.addEventListener("click", guardedEvent((event) => {
       event.preventDefault();
       event.stopPropagation();
-      panel.remove();
-    });
+      if (panel.isConnected) panel.remove();
+    }));
     return close;
   }
 
@@ -681,11 +683,11 @@
   function button(label, onClick) {
     const element = el("button", {}, label);
     element.type = "button";
-    element.addEventListener("click", (event) => {
+    element.addEventListener("click", guardedEvent((event) => {
       event.preventDefault();
       event.stopPropagation();
       onClick();
-    });
+    }));
     return element;
   }
 
@@ -858,12 +860,38 @@
     return /extension context invalidated|context invalidated/i.test(String(message || ""));
   }
 
+  function guardedEvent(handler) {
+    return function slopFrogGuardedEvent(event) {
+      if (stopped) return;
+      try {
+        handler(event);
+      } catch (error) {
+        if (isContextInvalidation(error?.message)) {
+          stopContentScript();
+          return;
+        }
+        throw error;
+      }
+    };
+  }
+
+  function suppressInvalidatedContextError(event) {
+    const message =
+      event?.reason?.message ||
+      event?.error?.message ||
+      event?.message ||
+      String(event?.reason || "");
+
+    if (!isContextInvalidation(message)) return;
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+    stopContentScript();
+  }
+
   function stopContentScript() {
     stopped = true;
     window.clearTimeout(scanTimer);
     observer?.disconnect();
-    window.removeEventListener("scroll", queueScan);
-    document.removeEventListener("keydown", closePanelsOnEscape);
   }
 
   function injectStyles() {
