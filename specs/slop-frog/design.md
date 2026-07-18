@@ -2,7 +2,7 @@
 
 ## Overview
 
-Slop Frog is a local-first Chrome extension for X. The extension observes visible posts while the user scrolls, extracts a normalized `Post_Envelope`, sends it to a detector running on the user's laptop, fetches community label aggregates from Supabase, computes a Slop Score result, and inserts a simple flag into the X feed.
+Slop Frog is a local-first Chrome extension for social feeds. The MVP demo path remains X-first, but the extension now uses platform adapters so it can observe visible posts on X, LinkedIn, Reddit, and Facebook, extract a normalized `Post_Envelope`, send it to a detector running on the user's laptop, fetch community label aggregates from Supabase, compute a Slop Score result, and insert compact controls into the feed.
 
 The design is optimized for a three-hour hackathon build by two people. The first phase creates shared contracts that both people must honor. After those contracts are verified, Person A owns the Chrome extension and in-feed UX while Person B owns the local detector service and Supabase community layer. The final integration phase joins both tracks and verifies the demo.
 
@@ -10,7 +10,7 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 
 1. **Shared contracts first.** The extension, detector, and Supabase layer must agree on data shapes before parallel work begins.
 2. **Local inference only for MVP.** The local detector service runs on `localhost`; no Modal, hosted inference, or cloud model serving is implemented.
-3. **X first.** The MVP targets X/Twitter only. Platform adapters should be structured so LinkedIn can be added later, but not built now.
+3. **X first, adapter-ready.** X/Twitter remains the primary demo target. LinkedIn, Reddit, and Facebook have basic adapters, but each platform still needs live DOM polish before being called production-ready.
 4. **Simple visible labels.** Users see red, yellow, green, or gray while scrolling. Details live in the evidence panel.
 5. **Gray is not green.** Gray means there is not enough signal or the system failed to score. Green means enough signal and low AI evidence.
 6. **Supabase is the community memory.** Supabase stores votes, reviewer weights, appeals, aggregate labels, hashes, and verdict history. Raw media is not stored.
@@ -23,7 +23,7 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 | Concern | MVP Choice |
 | --- | --- |
 | Browser integration | Chrome Extension Manifest V3 |
-| Target platform | X and Twitter domains |
+| Target platform | X first; basic adapters for LinkedIn, Reddit, and Facebook |
 | Extension language | TypeScript preferred; plain JavaScript acceptable if time is tight |
 | Extension UI | Content script overlays, popup/options page |
 | Local detector | Python FastAPI service on `http://localhost:8765` |
@@ -33,7 +33,7 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 | Charts | Lightweight SVG or DOM charts in evidence panel |
 | Packaging | Developer-mode extension plus local detector command |
 
-The user-facing UI is specified in [`ui.md`](ui.md). In short, users see compact Slop Frog controls directly on X posts: a flag button for evidence, a feedback icon button for community labeling, and an appeal icon button for challenging the label. The evidence panel does not contain feedback or appeal controls. Red posts collapse into a warning row only when auto-filter is enabled. The extension popup handles detector/Supabase status and settings.
+The user-facing UI is specified in [`ui.md`](ui.md). In short, users see compact Slop Frog controls directly on supported feed posts: a colored flag button for evidence, a feedback icon button for community labeling, and an appeal icon button for challenging the label. The evidence panel does not contain feedback or appeal controls. Red posts collapse into a warning row only when auto-filter is enabled. The extension popup handles detector/Supabase status and settings.
 
 ## High-Level Architecture
 
@@ -62,7 +62,7 @@ The shared contracts are the hard boundary between Person A and Person B. They m
 ### `Post_Envelope`
 
 ```ts
-type Platform = "x";
+type Platform = "x" | "linkedin" | "reddit" | "facebook";
 
 interface PostEnvelope {
   platform: Platform;
@@ -232,7 +232,12 @@ extension/
   manifest.json
   src/
     content/
-      xAdapter.ts
+      platformRegistry.ts
+      adapters/
+        xAdapter.ts
+        linkedinAdapter.ts
+        redditAdapter.ts
+        facebookAdapter.ts
       flagUi.ts
       evidencePanel.ts
     background/
@@ -290,7 +295,8 @@ No `all_urls` permission. No blanket access to every website.
 
 Responsibilities:
 
-- detect X posts;
+- select the correct platform adapter for the current site;
+- detect X, LinkedIn, Reddit, or Facebook posts with adapter-specific selectors;
 - extract `Post_Envelope`;
 - render compact Slop Frog flags as described in `ui.md`;
 - render the inline evidence panel;

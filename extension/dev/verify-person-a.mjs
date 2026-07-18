@@ -7,6 +7,10 @@ const manifest = readJson("manifest.json");
 
 assert(manifest.manifest_version === 3, "manifest is MV3");
 assert(!JSON.stringify(manifest).includes("<all_urls>"), "manifest avoids all_urls");
+for (const host of ["linkedin.com", "reddit.com", "facebook.com"]) {
+  assert(JSON.stringify(manifest.host_permissions).includes(host), `manifest permits ${host}`);
+  assert(JSON.stringify(manifest.content_scripts).includes(host), `content script matches ${host}`);
+}
 
 const manifestRefs = [
   manifest.background.service_worker,
@@ -56,6 +60,12 @@ assert(
   "content script scans X tweet articles"
 );
 assert(
+  contentScript.includes('platform: "linkedin"') &&
+    contentScript.includes('platform: "reddit"') &&
+    contentScript.includes('platform: "facebook"'),
+  "content script includes LinkedIn, Reddit, and Facebook adapters"
+);
+assert(
   contentScript.includes('"SLOP_FROG_SUBMIT_VOTE"'),
   "feedback panel sends vote action"
 );
@@ -69,9 +79,9 @@ assert(
 );
 assert(
   contentScript.includes('slot.className = "slop-frog-slot"') &&
-    contentScript.includes("findOuterActionGroup(article)") &&
-    contentScript.includes('actionGroup.insertAdjacentElement("afterend", slot)'),
-  "controls render after X action row without entering it"
+    contentScript.includes("activeAdapter?.findInsertionPoint(article)") &&
+    contentScript.includes('insertAdjacentElement("afterend", slot)'),
+  "controls render through platform insertion points"
 );
 assert(
   contentScript.includes("iconVerdictFlag(result.label)") &&

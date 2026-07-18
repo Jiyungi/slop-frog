@@ -3,13 +3,16 @@
   const processedArticles = new WeakMap();
   const panelState = new WeakMap();
   let settings = { ...runtime.DEFAULT_EXTENSION_SETTINGS };
+  let activeAdapter;
   let observer;
   let scanTimer;
 
   injectStyles();
-  boot();
+  queueMicrotask(boot);
 
   async function boot() {
+    activeAdapter = getPlatformAdapter(window.location);
+    if (!activeAdapter) return;
     settings = await getSettings();
     scanVisiblePosts();
     observer = new MutationObserver(queueScan);
@@ -29,13 +32,12 @@
   }
 
   function scanVisiblePosts() {
-    const articles = Array.from(
-      document.querySelectorAll('article[data-testid="tweet"]')
-    );
+    if (!activeAdapter) return;
+    const articles = activeAdapter.findPosts(document);
 
     for (const article of articles) {
       if (processedArticles.has(article)) continue;
-      const envelope = extractPostEnvelope(article);
+      const envelope = extractPostEnvelope(article, activeAdapter);
       processedArticles.set(article, envelope?.contentKey || "failed");
       renderPending(article);
 
@@ -50,7 +52,114 @@
     }
   }
 
-  function extractPostEnvelope(article) {
+  function getPlatformAdapter(location) {
+    const host = location.hostname.replace(/^www\./, "");
+    return PLATFORM_ADAPTERS.find((adapter) =>
+      adapter.hostnames.some((hostname) => host === hostname || host.endsWith(`.${hostname}`))
+    );
+  }
+
+  const PLATFORM_ADAPTERS = [
+    {
+      platform: "x",
+      hostnames: ["x.com", "twitter.com"],
+      findPosts(root) {
+        return Array.from(root.querySelectorAll('article[data-testid="tweet"]'));
+      },
+      extract: extractXPost,
+      findInsertionPoint: findXActionGroup,
+    },
+    {
+      platform: "linkedin",
+      hostnames: ["linkedin.com"],
+      findPosts(root) {
+        return uniqueTopLevel(
+          root.querySelectorAll(
+            '.feed-shared-update-v2, .occludable-update, [data-urn*="urn:li:activity"]'
+          )
+        ).filter((post) => getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS).length > 12);
+      },
+      extract: extractLinkedInPost,
+      findInsertionPoint(post) {
+        return (
+          post.querySelector(".feed-shared-social-action-bar") ||
+          post.querySelector(".social-details-social-counts") ||
+          post
+        );
+      },
+    },
+    {
+      platform: "reddit",
+      hostnames: ["reddit.com"],
+      findPosts(root) {
+        return uniqueTopLevel(
+          root.querySelectorAll('shreddit-post, article, [data-testid="post-container"]')
+        ).filter((post) => getRedditText(post).length > 8);
+      },
+      extract: extractRedditPost,
+      findInsertionPoint(post) {
+        return (
+          post.querySelector('[slot="post-media-container"]')?.parentElement ||
+          post.querySelector('[data-testid="post-container"]') ||
+          post
+        );
+      },
+    },
+    {
+      platform: "facebook",
+      hostnames: ["facebook.com"],
+      findPosts(root) {
+        return uniqueTopLevel(
+          root.querySelectorAll('[role="article"], [data-pagelet^="FeedUnit_"]')
+        ).filter((post) => getFacebookText(post).length > 12);
+      },
+      extract: extractFacebookPost,
+      findInsertionPoint(post) {
+        return (
+          Array.from(post.querySelectorAll('[role="button"]'))
+            .find((button) => /Like|Comment|Share/i.test(button.innerText || ""))
+            ?.closest('[role="group"]') || post
+        );
+      },
+    },
+  ];
+
+  const LINKEDIN_TEXT_SELECTORS = [
+    ".update-components-text",
+    ".feed-shared-update-v2__description-wrapper",
+    '[data-test-id="main-feed-activity-card__commentary"]',
+    '[dir="ltr"]',
+  ];
+
+  function extractPostEnvelope(article, adapter) {
+    const extracted = adapter.extract(article);
+    const visibleText = extracted.visibleText || "";
+    const normalizedText = runtime.normalizeText(visibleText);
+    const textHash = runtime.stableHash(
+      `${adapter.platform}:${normalizedText.toLowerCase()}:${extracted.url || ""}`
+    );
+
+    if (!extracted.id && !normalizedText && !extracted.imageUrls?.length) {
+      return null;
+    }
+
+    return {
+      platform: adapter.platform,
+      contentKey: extracted.id
+        ? `${adapter.platform}:${extracted.id}`
+        : `${adapter.platform}:text:${textHash}`,
+      tweetId: adapter.platform === "x" ? extracted.id : undefined,
+      url: extracted.url,
+      authorHandle: extracted.authorHandle,
+      visibleText,
+      normalizedText,
+      textHash,
+      imageUrls: extracted.imageUrls || [],
+      extractedAt: new Date().toISOString(),
+    };
+  }
+
+  function extractXPost(article) {
     const statusAnchor = Array.from(article.querySelectorAll('a[href*="/status/"]'))
       .map((anchor) => anchor.href)
       .find(Boolean);
@@ -63,21 +172,71 @@
       .map((image) => image.src)
       .filter(Boolean);
 
-    if (!tweetId && !normalizedText && imageUrls.length === 0) {
-      return null;
-    }
-
     return {
-      platform: "x",
-      contentKey: tweetId ? `x:${tweetId}` : `x:text:${textHash}`,
-      tweetId,
+      id: tweetId,
       url: statusAnchor,
       authorHandle,
       visibleText,
-      normalizedText,
-      textHash,
       imageUrls,
-      extractedAt: new Date().toISOString(),
+    };
+  }
+
+  function extractLinkedInPost(post) {
+    const url = firstHref(post, ['a[href*="/feed/update/"]', 'a[href*="activity:"]']);
+    const id =
+      post.getAttribute("data-urn")?.split(":").pop() ||
+      url?.match(/activity[:/-](\d+)/)?.[1];
+
+    return {
+      id,
+      url,
+      authorHandle: getTextFromSelectors(post, [
+        ".update-components-actor__name",
+        ".feed-shared-actor__name",
+        ".update-components-actor__title",
+      ]),
+      visibleText: getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS),
+      imageUrls: imageUrlsFrom(post, 'img[src]:not([src*="profile-displayphoto"])'),
+    };
+  }
+
+  function extractRedditPost(post) {
+    const url = firstHref(post, ['a[href*="/comments/"]', 'a[slot="full-post-link"]']);
+    const id =
+      post.getAttribute("id") ||
+      post.getAttribute("post-id") ||
+      url?.match(/comments\/([^/]+)/)?.[1];
+
+    return {
+      id,
+      url,
+      authorHandle:
+        post.getAttribute("author") ||
+        getTextFromSelectors(post, ['[slot="authorName"]', 'a[href^="/user/"]']),
+      visibleText: getRedditText(post),
+      imageUrls: imageUrlsFrom(post),
+    };
+  }
+
+  function extractFacebookPost(post) {
+    const url = firstHref(post, [
+      'a[href*="/posts/"]',
+      'a[href*="/permalink/"]',
+      'a[href*="story_fbid="]',
+    ]);
+    const id = url?.match(/(?:posts\/|story_fbid=|permalink\/)([^/?&]+)/)?.[1];
+
+    return {
+      id,
+      url,
+      authorHandle: getTextFromSelectors(post, [
+        'h2 strong',
+        'h3 strong',
+        'strong a[role="link"]',
+        'span[dir="auto"] strong',
+      ]),
+      visibleText: getFacebookText(post),
+      imageUrls: imageUrlsFrom(post),
     };
   }
 
@@ -111,6 +270,69 @@
       .map((node) => node.textContent || "")
       .find((text) => /^@\w+/.test(text.trim()));
     return handleText?.trim();
+  }
+
+  function getRedditText(post) {
+    return getTextFromSelectors(post, [
+      '[slot="title"]',
+      '[slot="text-body"]',
+      '[data-testid="post-title"]',
+      "h1",
+      "h2",
+      "h3",
+      "p",
+    ]);
+  }
+
+  function getFacebookText(post) {
+    const text = getTextFromSelectors(post, [
+      '[data-ad-preview="message"]',
+      '[dir="auto"]',
+      'div[style*="text-align"]',
+    ]);
+    return text
+      .split("\n")
+      .filter((line) => !/^(Like|Comment|Share|Follow|Suggested for you)$/i.test(line.trim()))
+      .slice(0, 8)
+      .join("\n");
+  }
+
+  function getTextFromSelectors(root, selectors) {
+    for (const selector of selectors) {
+      const text = Array.from(root.querySelectorAll(selector))
+        .map((node) => node.innerText || node.textContent || "")
+        .map((textValue) => textValue.trim())
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+      if (text.length > 0) return text;
+    }
+    return "";
+  }
+
+  function firstHref(root, selectors) {
+    for (const selector of selectors) {
+      const href = Array.from(root.querySelectorAll(selector))
+        .map((anchor) => anchor.href)
+        .find(Boolean);
+      if (href) return href;
+    }
+    return undefined;
+  }
+
+  function imageUrlsFrom(root, selector = "img[src]") {
+    return Array.from(root.querySelectorAll(selector))
+      .map((image) => image.currentSrc || image.src)
+      .filter(Boolean)
+      .filter((src) => !src.startsWith("data:"))
+      .slice(0, 8);
+  }
+
+  function uniqueTopLevel(nodes) {
+    const list = Array.from(nodes);
+    return list.filter(
+      (node) => !list.some((other) => other !== node && other.contains(node))
+    );
   }
 
   function renderPending(article) {
@@ -209,9 +431,9 @@
     mount.setAttribute("aria-label", "Slop Frog controls");
 
     slot.append(mount);
-    const actionGroup = findOuterActionGroup(article);
-    if (actionGroup) {
-      actionGroup.insertAdjacentElement("afterend", slot);
+    const insertionPoint = activeAdapter?.findInsertionPoint(article);
+    if (insertionPoint && insertionPoint !== article) {
+      insertionPoint.insertAdjacentElement("afterend", slot);
     } else {
       article.append(slot);
     }
@@ -219,7 +441,7 @@
     return mount;
   }
 
-  function findOuterActionGroup(article) {
+  function findXActionGroup(article) {
     const groups = Array.from(article.querySelectorAll('[role="group"]')).filter(
       (group) =>
         group.querySelector(
@@ -317,7 +539,7 @@
             type: "SLOP_FROG_SUBMIT_VOTE",
             payload: {
               contentKey: payload.result.contentKey,
-              platform: "x",
+              platform: payload.post?.platform || activeAdapter?.platform || "x",
               vote,
             },
           });
@@ -445,7 +667,8 @@
   }
 
   function makeLocalGrayResponse(article) {
-    const contentKey = `x:failed:${runtime.stableHash(article?.innerText || Date.now())}`;
+    const platform = activeAdapter?.platform || "x";
+    const contentKey = `${platform}:failed:${runtime.stableHash(article?.innerText || Date.now())}`;
     const scoreResponse = runtime.makeGrayScoreResponse("extraction_failed");
     const result = runtime.composeSlopScore(
       { ...scoreResponse, contentKey },
