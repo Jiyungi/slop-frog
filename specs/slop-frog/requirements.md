@@ -28,6 +28,9 @@ Three rules are non-negotiable and shape every requirement below:
 - **Reviewer_Reputation**: A weight applied to a community reviewer based on prior review count, agreement with final labels, and appeal outcomes.
 - **Content_Fingerprint**: A stable identifier for repost recognition, including normalized text hash and optional media hashes.
 - **Evidence_Panel**: The expandable UI attached to a flag showing detector score, community score, modality score, provenance status, appeal status, and score history.
+- **Compact_Action_Row**: The quiet icon-first control row beside an X post, containing separate evidence, feedback, and appeal buttons.
+- **Feedback_Panel**: The focused panel opened from the feedback icon for community labeling.
+- **Appeal_Panel**: The focused panel opened from the appeal icon for challenging a label.
 - **Verdict_History**: A time-ordered record of how scores, labels, appeals, and community aggregates changed.
 - **Training_Pipeline_Placeholder**: A future architecture section for periodic model improvement. It is inactive in the MVP and must not fetch X content.
 
@@ -142,8 +145,11 @@ Three rules are non-negotiable and shape every requirement below:
 4. THE Evidence_Panel SHALL show community aggregate when available.
 5. THE Evidence_Panel SHALL show separate modality rows for text, image, audio, and video, with unsupported modalities marked unavailable.
 6. THE Evidence_Panel SHALL explain gray labels in plain language.
-7. THE Evidence_Panel SHALL include actions for community labeling and appeal submission.
-8. THE Evidence_Panel SHALL not use color alone to communicate flag meaning.
+7. THE Evidence_Panel SHALL NOT include community labeling controls or appeal submission controls.
+8. THE extension SHALL render a separate Compact_Action_Row with an evidence button, feedback button, and appeal button.
+9. THE feedback button SHALL open the Feedback_Panel.
+10. THE appeal button SHALL open the Appeal_Panel.
+11. THE Evidence_Panel and Compact_Action_Row SHALL not use color alone to communicate flag meaning.
 
 ### Requirement 9: Supabase community labeling
 
@@ -191,7 +197,7 @@ Three rules are non-negotiable and shape every requirement below:
 
 #### Acceptance Criteria
 
-1. THE Evidence_Panel SHALL include an appeal action.
+1. THE Compact_Action_Row SHALL include a separate appeal action.
 2. An appeal SHALL include `contentKey`, `reviewerId`, `reason`, `status`, and `createdAt`.
 3. Allowed appeal statuses SHALL be `submitted`, `under_review`, `accepted`, and `rejected`.
 4. THE Supabase schema SHALL preserve Verdict_History events.

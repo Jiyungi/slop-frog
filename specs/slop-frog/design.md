@@ -151,6 +151,27 @@ interface SlopScoreResult {
 }
 ```
 
+### UI action contracts
+
+The compact X post controls are separate by contract. The flag opens evidence. Feedback and appeal open their own focused panels.
+
+```ts
+type SlopControlKind = "evidence" | "feedback" | "appeal";
+type PanelKind = "evidence" | "feedback" | "appeal";
+type SlopIconName = "Flag" | "MessageSquareCheck" | "ShieldAlert";
+
+interface SlopControl {
+  kind: SlopControlKind;
+  icon: SlopIconName;
+  tooltip: string;
+  ariaLabel: string;
+  visibleLabel?: string;
+  opens: PanelKind;
+}
+```
+
+The evidence panel contract intentionally excludes feedback and appeal controls. Those actions are represented by `FeedbackPanelModel` and `AppealPanelModel`, not nested inside evidence.
+
 ## Runtime Flow
 
 ### 1. Feed extraction

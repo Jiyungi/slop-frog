@@ -31,7 +31,7 @@ No task may be marked complete until its verification step has passed. Code exis
 
 - [x] 2. Define shared contracts before parallel work (Owner: Both)
   - [x] 2.1 Define the shared TypeScript contracts
-    - Create `extension/src/shared/contracts.ts` containing `PostEnvelope`, `ScoreRequest`, `ScoreResponse`, `CommunityAggregate`, `SlopScoreResult`, `FlagLabel`, and `ExtensionSettings`.
+    - Create `extension/src/shared/contracts.ts` containing `PostEnvelope`, `ScoreRequest`, `ScoreResponse`, `CommunityAggregate`, `SlopScoreResult`, `FlagLabel`, `ExtensionSettings`, compact UI control contracts, evidence panel model, feedback panel model, and appeal panel model.
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
     - **Verification:** The file exports all required types and includes only the four allowed labels: `red`, `yellow`, `green`, `gray`.
 
@@ -52,7 +52,7 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** Schema can be reviewed without missing required columns from requirements.md.
 
   - [x] 3.2 Define Supabase environment contract
-    - Document required values: Supabase URL, anon key, and demo reviewer ID.
+    - Document required values: Supabase URL, publishable key, and demo reviewer ID.
     - _Requirements: 9.1, 14.1_
     - **Verification:** README or env example names required variables without secret values.
 
