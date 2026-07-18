@@ -107,12 +107,12 @@ No task may be marked complete until its verification step has passed. Code exis
 
 - [ ] 8. Implement in-feed flag UI (Owner: Person A)
   - [ ] 8.1 Render compact flags on X posts
-    - Insert red, yellow, green, or gray UI into the post container without breaking X layout.
+    - Insert the compact Slop Frog flag states from `specs/slop-frog/ui.md` into the post container without breaking X layout.
     - _Requirements: 6.6, 6.7, 8.8_
     - **Verification:** At least three X posts show stable flags while scrolling and no text overlaps post content.
 
   - [ ] 8.2 Render evidence panel
-    - Show detector score, Slop Score, community score, modality rows, gray reason, vote buttons, appeal action, and simple history area.
+    - Show the inline evidence panel from `specs/slop-frog/ui.md`: detector score, Slop Score, community score, modality rows, gray reason, vote buttons, appeal action, and simple history area.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
     - **Verification:** Clicking a flag opens the panel and all required sections render from fixture data.
 

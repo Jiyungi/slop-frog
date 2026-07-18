@@ -32,6 +32,8 @@ The design is optimized for a three-hour hackathon build by two people. The firs
 | Charts | Lightweight SVG or DOM charts in evidence panel |
 | Packaging | Developer-mode extension plus local detector command |
 
+The user-facing UI is specified in [`ui.md`](ui.md). In short, users see compact Slop Frog flags directly on X posts, an inline evidence panel when a flag is opened, a collapsed warning row for red posts when auto-filter is enabled, and a small extension popup for detector/Supabase status and settings.
+
 ## High-Level Architecture
 
 ```mermaid
@@ -268,8 +270,8 @@ Responsibilities:
 
 - detect X posts;
 - extract `Post_Envelope`;
-- render flags;
-- render evidence panel;
+- render compact Slop Frog flags as described in `ui.md`;
+- render the inline evidence panel;
 - collapse red posts when auto-filter is enabled;
 - observe new posts while scrolling.
 
