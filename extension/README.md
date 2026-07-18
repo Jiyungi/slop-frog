@@ -11,3 +11,14 @@ against three local X-style posts with mocked detector responses.
 
 This fixture is not the final demo. It is a quick UI sanity check before loading
 the unpacked extension on X.
+
+## Person A verification
+
+Run:
+
+```bash
+node extension/dev/verify-person-a.mjs
+```
+
+The script checks manifest references, scoped permissions, Slop Score thresholds,
+gray handling, and separation between evidence, feedback, and appeal panels.
