@@ -2,6 +2,7 @@
   const runtime = globalThis.SlopFrogRuntime;
   const processedArticles = new WeakMap();
   const articleMounts = new WeakMap();
+  const contentKeyOwners = new Map();
   const panelState = new WeakMap();
   let settings = { ...runtime.DEFAULT_EXTENSION_SETTINGS };
   let activeAdapter;
@@ -50,13 +51,23 @@
     for (const article of articles) {
       if (processedArticles.has(article)) continue;
       const envelope = extractPostEnvelope(article, activeAdapter);
-      processedArticles.set(article, envelope?.contentKey || "failed");
-      renderPending(article);
 
       if (!envelope) {
+        processedArticles.set(article, "failed");
         renderScored(article, makeLocalGrayResponse(article));
         continue;
       }
+
+      const duplicateOwner = connectedOwnerForContentKey(envelope.contentKey);
+      if (duplicateOwner && duplicateOwner !== article) {
+        processedArticles.set(article, `duplicate:${envelope.contentKey}`);
+        removeSlopUi(article);
+        continue;
+      }
+
+      contentKeyOwners.set(envelope.contentKey, article);
+      processedArticles.set(article, envelope.contentKey);
+      renderPending(article, envelope.contentKey);
 
       sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope })
         .then((response) => renderScored(article, response))
@@ -96,7 +107,7 @@
       extract: extractLinkedInPost,
       findInsertionPoint(post) {
         if (isLinkedInCommentContainer(post)) {
-          return findLinkedInCommentActionRow(post);
+          return findLinkedInCommentInsertionPoint(post);
         }
         return (
           post.querySelector(".feed-shared-social-action-bar") ||
@@ -132,13 +143,22 @@
     ".comments-comment-item",
     ".comments-comment-entity",
     ".comments-comment-list__comment-item",
+    ".comments-reply-item",
+    ".comments-replies-list__reply-item",
+    ".comments-thread-entity",
+    ".comment-thread-node",
     '[data-test-id="comments-comment-item"]',
     '[data-test-id*="comments-comment"]',
+    '[data-test-id*="comments-reply"]',
   ];
 
   const LINKEDIN_COMMENT_TEXT_SELECTORS = [
     ".comments-comment-item__inline-show-more-text",
     ".comments-comment-text",
+    ".comments-comment-item__commentary",
+    ".comments-comment-item__text",
+    ".comments-reply-item__main-content",
+    ".comments-reply-item-content-body",
     ".comments-comment-item-content-body",
     ".comments-comment-entity__content",
     ".comments-comment-item__main-content",
@@ -407,6 +427,21 @@
     );
   }
 
+  function findLinkedInCommentInsertionPoint(comment) {
+    return (
+      comment.querySelector(".comments-comment-item__inline-show-more-text") ||
+      comment.querySelector(".comments-comment-text") ||
+      comment.querySelector(".comments-comment-item-content-body") ||
+      comment.querySelector(".comments-comment-entity__content") ||
+      comment.querySelector(".comments-comment-item__main-content") ||
+      comment.querySelector(".update-components-text") ||
+      comment.querySelector(".break-words") ||
+      comment.querySelector('[dir="ltr"]') ||
+      findLinkedInCommentActionRow(comment) ||
+      comment
+    );
+  }
+
   function closestLinkedInCommentContainerByHeuristic(node) {
     let current = node?.closest?.("div, article, li");
     for (let depth = 0; current && depth < 8; depth += 1) {
@@ -562,8 +597,17 @@
     return Array.from(new Set(nodes.filter(Boolean)));
   }
 
-  function renderPending(article) {
-    const mount = ensureMount(article);
+  function connectedOwnerForContentKey(contentKey) {
+    const owner = contentKeyOwners.get(contentKey);
+    if (!owner?.isConnected) {
+      contentKeyOwners.delete(contentKey);
+      return null;
+    }
+    return owner;
+  }
+
+  function renderPending(article, contentKey = "") {
+    const mount = ensureMount(article, contentKey);
     mount.replaceChildren(
       createControlButton({
         kind: "evidence",
@@ -587,7 +631,7 @@
 
   function renderSlopControls(article, payload) {
     const result = payload.result;
-    const mount = ensureMount(article);
+    const mount = ensureMount(article, payload.post?.contentKey || result.contentKey || "");
     const shouldAutoFilter =
       Boolean(result.autoFiltered) && article.dataset.slopFrogRevealed !== "true";
 
@@ -684,15 +728,30 @@
     article.querySelector(":scope > .slop-frog-filter-card")?.remove();
   }
 
-  function ensureMount(article) {
+  function removeSlopUi(article) {
+    article.querySelectorAll(":scope > .slop-frog-slot, :scope > .slop-frog-filter-card").forEach((node) =>
+      node.remove()
+    );
+    const mount = articleMounts.get(article);
+    mount?.closest?.(".slop-frog-slot")?.remove();
+    articleMounts.delete(article);
+    panelState.delete(article);
+  }
+
+  function ensureMount(article, contentKey = "") {
     let mount = articleMounts.get(article);
-    if (mount?.isConnected) return mount;
+    if (mount?.isConnected) {
+      const slot = mount.closest(".slop-frog-slot");
+      if (slot && contentKey) slot.dataset.contentKey = contentKey;
+      return mount;
+    }
     mount = article.querySelector(":scope > .slop-frog-slot > .slop-frog-controls");
     if (mount) return mount;
 
     const slot = document.createElement("div");
     slot.className = "slop-frog-slot";
     slot.dataset.platform = activeAdapter?.platform || "";
+    if (contentKey) slot.dataset.contentKey = contentKey;
     if (activeAdapter?.platform === "linkedin" && isLinkedInCommentContainer(article)) {
       slot.classList.add("is-linkedin-comment");
     }

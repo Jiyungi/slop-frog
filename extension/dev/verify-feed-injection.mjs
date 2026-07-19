@@ -208,17 +208,56 @@ try {
     `JSON.stringify({
       oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
       newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
-      comments: document.querySelectorAll('.comments-comment-item, .comment-thread-node').length,
+      rawComments: document.querySelectorAll('.comments-comment-item, .comment-thread-node').length,
       controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      duplicateSlots: (() => {
+        const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
+        return keys.length - new Set(keys).size;
+      })(),
+      overlap: (() => {
+        const controls = Array.from(document.querySelectorAll('.slop-frog-controls'));
+        const nativeButtons = Array.from(document.querySelectorAll('button, [role="button"]')).filter((button) =>
+          /Like|Comment|Reply|Repost|Send/i.test(button.getAttribute('aria-label') || button.textContent || '')
+        );
+        return controls.some((control) => {
+          const a = control.getBoundingClientRect();
+          return nativeButtons.some((button) => {
+            if (control.contains(button) || button.closest('.slop-frog-controls')) return false;
+            const b = button.getBoundingClientRect();
+            return !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
+          });
+        });
+      })()
     })`,
     (state) =>
       state.oldCards === 3 &&
       state.newCards === 1 &&
-      state.comments === 3 &&
+      state.rawComments === 4 &&
       state.controls === 7 &&
-      state.commentControls === 3,
-    "LinkedIn feed posts and comments with controls across old and current DOM shapes"
+      state.commentControls === 3 &&
+      state.duplicateSlots === 0 &&
+      state.overlap === false,
+    "LinkedIn feed posts and comments with one non-overlapping control set per content item"
+  );
+  await evaluate(
+    linkedInPage,
+    `document.querySelector('.feed-shared-update-v2').insertAdjacentHTML('beforeend',
+      '<div class="comments-comment-item" data-test-id="comments-comment-item"><div class="comments-comment-text">This is a dynamically loaded LinkedIn comment after the post was already scanned, and it still needs its own Slop Frog controls.</div><div class="comments-comment-social-bar" role="group"><button aria-label="Like dynamic LinkedIn comment">Like</button><button aria-label="Reply to dynamic LinkedIn comment">Reply</button></div></div>'
+    )`
+  );
+  const dynamicLinkedInState = await waitForState(
+    linkedInPage,
+    `JSON.stringify({
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      duplicateSlots: (() => {
+        const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
+        return keys.length - new Set(keys).size;
+      })()
+    })`,
+    (state) => state.controls === 8 && state.commentControls === 4 && state.duplicateSlots === 0,
+    "dynamically loaded LinkedIn comments receive one control set"
   );
 
   console.log(
@@ -237,6 +276,7 @@ try {
         stableControlCount,
       },
         linkedIn: linkedInState,
+        dynamicLinkedIn: dynamicLinkedInState,
       },
       null,
       2
