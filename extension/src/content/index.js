@@ -335,11 +335,11 @@
   function renderSlopControls(article, payload) {
     const result = payload.result;
     const mount = ensureMount(article);
+    const shouldAutoFilter =
+      Boolean(result.autoFiltered) && article.dataset.slopFrogRevealed !== "true";
 
-    article.classList.toggle(
-      "slop-frog-filtered",
-      Boolean(result.autoFiltered) && article.dataset.slopFrogRevealed !== "true"
-    );
+    article.classList.toggle("slop-frog-filtered", shouldAutoFilter);
+    if (!shouldAutoFilter) removeFilterCard(article);
 
     mount.replaceChildren(
       createControlButton({
@@ -364,7 +364,7 @@
       })
     );
 
-    if (result.autoFiltered) {
+    if (shouldAutoFilter) {
       renderFilterCard(article);
     }
   }
@@ -412,13 +412,19 @@
       button("Show post", () => {
         article.dataset.slopFrogRevealed = "true";
         article.classList.remove("slop-frog-filtered");
+        removeFilterCard(article);
       }),
       button("Evidence", () => {
         article.dataset.slopFrogRevealed = "true";
         article.classList.remove("slop-frog-filtered");
+        removeFilterCard(article);
         togglePanel(article, "evidence");
       })
     );
+  }
+
+  function removeFilterCard(article) {
+    article.querySelector(":scope > .slop-frog-filter-card")?.remove();
   }
 
   function ensureMount(article) {
@@ -1297,18 +1303,50 @@
         display: none !important;
       }
 
+      article.slop-frog-filtered {
+        display: block !important;
+        box-sizing: border-box !important;
+        min-height: 0 !important;
+        padding: 10px 16px !important;
+      }
+
       .slop-frog-filter-card {
         --sf-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         display: flex;
         align-items: center;
-        gap: 7px;
-        padding: 12px;
-        color: oklch(25% 0.04 155);
-        background: oklch(98% 0.015 155);
+        justify-content: space-between;
+        gap: 10px;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        margin: 0 !important;
+        padding: 11px 12px;
+        border: 1px solid color-mix(in oklch, oklch(68% 0.22 31) 48%, transparent);
+        border-radius: 17px;
+        color: oklch(96% 0.015 154);
+        background:
+          radial-gradient(circle at 100% 0%, color-mix(in oklch, oklch(70% 0.22 31) 15%, transparent), transparent 34%),
+          linear-gradient(180deg, oklch(18% 0.034 154), oklch(12% 0.024 154));
+        box-shadow:
+          0 16px 34px color-mix(in oklch, black 28%, transparent),
+          inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+        font: 12px/1.25 var(--sf-font);
+      }
+
+      .slop-frog-filter-card strong {
+        color: oklch(98% 0.012 154);
+        font-weight: 760;
+        letter-spacing: -0.01em;
       }
 
       .slop-frog-filter-card span {
-        color: oklch(42% 0.04 155);
+        color: oklch(79% 0.055 154);
+        margin-right: auto;
+        white-space: nowrap;
+      }
+
+      .slop-frog-filter-card button {
+        flex: 0 0 auto;
       }
 
       @media (prefers-reduced-motion: no-preference) {

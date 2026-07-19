@@ -128,6 +128,14 @@ assert(
     sliceFunction(contentScript, "refreshRenderedPostsForSettings").includes("renderSlopControls"),
   "settings changes repaint visible posts"
 );
+assert(
+  contentScript.includes("function removeFilterCard") &&
+    sliceFunction(contentScript, "renderSlopControls").includes("if (!shouldAutoFilter) removeFilterCard(article)") &&
+    sliceFunction(contentScript, "renderFilterCard").includes("removeFilterCard(article)") &&
+    contentScript.includes("article.slop-frog-filtered {") &&
+    contentScript.includes("display: block !important;"),
+  "auto-filter cleanup removes stale blockers and keeps hidden posts compact"
+);
 const backgroundScript = fs.readFileSync(
   path.join(extensionRoot, "src/background/index.js"),
   "utf8"
