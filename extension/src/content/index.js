@@ -28,6 +28,7 @@
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("scroll", guardedEvent(queueScan), { passive: true });
     document.addEventListener("keydown", guardedEvent(closePanelsOnEscape));
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
   }
 
   async function getSettings() {
@@ -365,6 +366,28 @@
 
     if (result.autoFiltered) {
       renderFilterCard(article);
+    }
+  }
+
+  function handleRuntimeMessage(message) {
+    if (message?.type !== "SLOP_FROG_SETTINGS_CHANGED") return;
+    settings = { ...settings, ...(message.settings || {}) };
+    refreshRenderedPostsForSettings();
+  }
+
+  function refreshRenderedPostsForSettings() {
+    if (stopped) return;
+    const articles = activeAdapter?.findPosts(document) || [];
+    for (const article of articles) {
+      const payload = panelState.get(article);
+      if (!payload?.scoreResponse) continue;
+      payload.settings = settings;
+      payload.result = runtime.composeSlopScore(
+        { ...payload.scoreResponse, contentKey: payload.post?.contentKey || "" },
+        payload.communityAggregate,
+        settings
+      );
+      renderSlopControls(article, payload);
     }
   }
 
@@ -943,6 +966,7 @@
     stopped = true;
     window.clearTimeout(scanTimer);
     observer?.disconnect();
+    chrome.runtime.onMessage.removeListener?.(handleRuntimeMessage);
   }
 
   function quietStopContentScript() {

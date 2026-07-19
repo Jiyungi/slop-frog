@@ -38,9 +38,11 @@ async function routeMessage(message) {
     case "SLOP_FROG_SAVE_SETTINGS": {
       const current = await runtime.getSettings();
       const saved = await runtime.saveSettings({ ...current, ...(message.settings || {}) });
+      const effectiveSettings = await applyLocalRuntimeConfig(saved);
+      notifySettingsChanged(effectiveSettings);
       return {
         ok: true,
-        settings: await applyLocalRuntimeConfig(saved),
+        settings: effectiveSettings,
       };
     }
     case "SLOP_FROG_GET_STATUS":
@@ -365,6 +367,28 @@ function remember(cacheKey, response) {
     const oldestKey = memoryCache.keys().next().value;
     memoryCache.delete(oldestKey);
   }
+}
+
+function notifySettingsChanged(nextSettings) {
+  chrome.tabs?.query?.({ url: supportedTabUrlPatterns() }, (tabs) => {
+    for (const tab of tabs || []) {
+      if (!tab.id) continue;
+      chrome.tabs.sendMessage(
+        tab.id,
+        { type: "SLOP_FROG_SETTINGS_CHANGED", settings: nextSettings },
+        () => void chrome.runtime.lastError
+      );
+    }
+  });
+}
+
+function supportedTabUrlPatterns() {
+  return [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*",
+  ];
 }
 
 function trimSlash(value) {

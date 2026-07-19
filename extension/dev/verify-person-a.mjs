@@ -122,9 +122,24 @@ assert(
     sliceFunction(contentScript, "updatePanelCommunity").includes("renderSlopControls"),
   "community updates repaint the compact flag"
 );
+assert(
+  contentScript.includes('"SLOP_FROG_SETTINGS_CHANGED"') &&
+    contentScript.includes("refreshRenderedPostsForSettings") &&
+    sliceFunction(contentScript, "refreshRenderedPostsForSettings").includes("renderSlopControls"),
+  "settings changes repaint visible posts"
+);
 const backgroundScript = fs.readFileSync(
   path.join(extensionRoot, "src/background/index.js"),
   "utf8"
+);
+assert(
+  backgroundScript.includes("notifySettingsChanged") &&
+    backgroundScript.includes("supportedTabUrlPatterns") &&
+    backgroundScript.includes("https://x.com/*") &&
+    backgroundScript.includes("https://www.linkedin.com/*") &&
+    backgroundScript.includes("chrome.tabs.sendMessage") &&
+    backgroundScript.includes('"SLOP_FROG_SETTINGS_CHANGED"'),
+  "background broadcasts settings changes to content scripts"
 );
 assert(
   backgroundScript.includes("scoreHistory: []") &&
