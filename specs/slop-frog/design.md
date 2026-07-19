@@ -2,62 +2,200 @@
 
 ## Overview
 
-Slop Frog is a local-first Chrome extension for social feeds. The MVP demo scope is X plus LinkedIn: the extension uses platform adapters to observe visible posts on X/Twitter and LinkedIn, extract a normalized `Post_Envelope`, send it to a detector running on the user's laptop, fetch community label aggregates from Supabase, compute a Slop Score result, and insert compact controls into the feed.
+Slop Frog is a Chrome extension that adds a lightweight AI-content safety layer to X and LinkedIn. While the user scrolls, the extension extracts visible post text and limited metadata, sends a scoring request through the product workflow, and renders a compact flag directly on the post.
 
-The design is optimized for a three-hour hackathon build by two people. The first phase creates shared contracts that both people must honor. After those contracts are verified, Person A owns the Chrome extension and in-feed UX while Person B owns the local detector service and Supabase community layer. The final integration phase joins both tracks and verifies the demo.
+The new hackathon version is no longer a purely local-laptop detector plus Supabase project. That approach was useful for the first build, but the Imbue/Qwen detector is too heavy for reliable MacBook Air inference. The current product direction is:
 
-### Design Principles
+- **Chrome extension:** user-facing feed layer for X and LinkedIn.
+- **Runtype:** product API, workflow orchestration, learning-loop coordination, and eval gates.
+- **Modal:** hosted GPU inference for the Imbue/Qwen text detector.
+- **InsForge:** backend database, secrets, functions, app data, reviewer reputation, votes, appeals, verdict history, and cleaned training-data metadata.
+- **No Cotal:** intentionally omitted because it does not clearly serve the product right now.
 
-1. **Shared contracts first.** The extension, detector, and Supabase layer must agree on data shapes before parallel work begins.
-2. **Local inference only for MVP.** The local detector service runs on `localhost`; no Modal, hosted inference, or cloud model serving is implemented.
-3. **X + LinkedIn only for this MVP.** X/Twitter remains the primary demo target. LinkedIn is the second supported platform. Reddit, Facebook, and other sites stay out of scope until the demo path is stable.
-4. **Simple visible labels.** Users see red, yellow, green, or gray while scrolling. Details live in the evidence panel.
-5. **Gray is not green.** Gray means there is not enough signal or the system failed to score. Green means enough signal and low AI evidence.
-6. **Supabase is the community memory.** Supabase stores votes, reviewer weights, appeals, aggregate labels, hashes, and verdict history. Raw media is not stored.
-7. **No hidden training pipeline.** Future training architecture is documented, but disabled in the MVP.
-8. **Verified tasks only.** A task is complete only after its verification step has passed.
-9. **Quiet UI, low text.** UI must use Impeccable guidance and avoid unnecessary explanatory copy. Buttons should be icon-first with short labels/tooltips, like a social media app. Evidence, feedback, and appeals must be separate focused surfaces.
+The branch that currently makes the most sense for this direction is `modal-imbue-inference`. It already contains the Modal inference work, InsForge project link, Runtype setup notes, and recent extension fixes. The main branch can be updated later after this branch is demo-stable.
 
-## Technology Stack
+## Product shape from the user perspective
 
-| Concern | MVP Choice |
+The user installs Slop Frog, opens X or LinkedIn, and scrolls normally. Each supported post gets a small control group:
+
+- a colored flag for the Slop Score evidence;
+- a feedback icon for community judgment;
+- an appeal icon for challenging a label.
+
+The user does not paste posts into a separate app. The user does not read a big explanation beside every post. Slop Frog behaves like a small trust annotation layer inside the feed.
+
+Flag meaning:
+
+- **Red:** high Slop Score.
+- **Yellow:** medium or mixed Slop Score.
+- **Green:** low Slop Score.
+- **Gray:** not enough signal or the detector/workflow was unavailable.
+
+Gray is a system honesty state, not a human-content label.
+
+## Design principles
+
+1. **Scroll-first, not paste-first.** The extension must work in the feed.
+2. **Simple labels, inspectable evidence.** The feed shows a flag; details stay one click away.
+3. **Contestable by design.** Users can vote and appeal.
+4. **Autonomous workflow, human-gated learning.** Runtype can coordinate data cleaning and evals, but model promotion requires gates.
+5. **Modal for heavy inference.** Do not force hackathon judges or users to run a huge model locally.
+6. **InsForge for backend memory.** Supabase is no longer the target backend.
+7. **Privacy-minimized by default.** Store explicit labels and limited metadata, not everyone's entire feed.
+8. **No fake confidence.** Unsupported media and insufficient evidence must be visible as gray/unsupported.
+9. **UI should feel native.** Compact icons, clean spacing, strong contrast, minimal text.
+
+## Technology stack
+
+| Concern | Current direction |
 | --- | --- |
 | Browser integration | Chrome Extension Manifest V3 |
-| Target platform | X/Twitter first; LinkedIn second |
-| Extension language | TypeScript preferred; plain JavaScript acceptable if time is tight |
-| Extension UI | Content script overlays, popup/options page |
-| Local detector | Python FastAPI service on `http://localhost:8765` |
-| Detector implementation | Bouncer-inspired local text scoring; deterministic heuristic fallback allowed for demo |
-| Community data | Supabase Postgres |
-| Auth | Anonymous/demo reviewer ID stored locally for MVP |
-| Charts | Lightweight SVG or DOM charts in evidence panel |
-| Packaging | Developer-mode extension plus local detector command |
+| Platforms | X/Twitter and LinkedIn |
+| In-feed UI | Content-script DOM UI |
+| Product workflow layer | Runtype product APIs, flows, agents, evals |
+| Detector serving | Modal hosted endpoint |
+| Detector model | Imbue-released Qwen-based text detector path / compatible artifact |
+| Backend | InsForge Postgres, functions, secrets |
+| Community data | InsForge tables and aggregate queries |
+| Learning loop | Runtype-managed, InsForge-backed, Modal-executed training/eval jobs |
+| Cotal | Out of scope |
 
-The user-facing UI is specified in [`ui.md`](ui.md). In short, users see compact Slop Frog controls directly on supported feed posts: a colored flag button for evidence, a feedback icon button for community labeling, and an appeal icon button for challenging the label. The evidence panel does not contain feedback or appeal controls. Red posts collapse into a warning row only when auto-filter is enabled. The extension popup handles detector/Supabase status and settings.
-
-## High-Level Architecture
+## High-level architecture
 
 ```mermaid
 graph TD
-    X[X feed page] --> CS[Content Script]
-    CS --> Extract[Extract Post_Envelope]
-    Extract --> BG[Background Worker]
-    BG --> Cache[Local cache via chrome.storage]
-    BG --> Local[Local Detector Service localhost:8765]
-    BG --> SB[Supabase Community API]
-    Local --> Score[Detector_Score + Evidence_Coverage]
-    SB --> Community[Community_Aggregate + Verdict_History]
-    Score --> Compose[Slop Score Engine]
-    Community --> Compose
-    Compose --> UI[Flag UI + Evidence Panel]
-    UI --> X
-    UI --> Vote[Community Vote / Appeal]
-    Vote --> SB
+    User[User scrolls X or LinkedIn] --> CS[Chrome content script]
+    CS --> Adapter[Platform adapter]
+    Adapter --> Envelope[Post_Envelope]
+    Envelope --> BG[Extension background worker]
+    BG --> Cache[Extension cache/settings]
+    BG --> RT[Runtype score_post API]
+    RT --> Modal[Modal Imbue/Qwen detector]
+    Modal --> RT
+    RT --> IF[InsForge aggregate lookup / verdict write]
+    IF --> RT
+    RT --> BG
+    BG --> UI[Flag UI]
+    UI --> Evidence[Evidence panel]
+    UI --> Feedback[Feedback panel]
+    UI --> Appeal[Appeal panel]
+    Feedback --> IF
+    Appeal --> IF
 ```
 
-## Shared Contracts
+During debugging, the extension may call Modal directly to isolate failures. For product architecture and sponsor alignment, the stable path should be extension -> Runtype -> Modal/InsForge.
 
-The shared contracts are the hard boundary between Person A and Person B. They must be finished and verified before the team splits.
+## Runtime flow
+
+### 1. Platform detection
+
+The content script chooses a platform adapter based on the current URL.
+
+Supported adapters:
+
+- `x`
+- `linkedin`
+
+Unsupported sites do nothing.
+
+### 2. Post extraction
+
+The adapter finds visible post containers and extracts:
+
+- platform;
+- post URL when available;
+- platform post ID when available;
+- author handle/name when available;
+- visible text;
+- normalized text;
+- text hash;
+- visible image URLs when available;
+- timestamp when available;
+- extraction timestamp.
+
+The extension does not upload raw media. For LinkedIn, the extension may use text visible in the browser session, but the backend must not scrape LinkedIn later.
+
+### 3. Scoring request
+
+The background worker creates a `Score_Request` and sends it to the Runtype `score_post` endpoint.
+
+If Runtype is unavailable during a local debug run, the extension may use a configured Modal detector URL directly.
+
+### 4. Runtype scoring workflow
+
+Runtype should own the product-level scoring workflow:
+
+1. validate the request shape;
+2. call the Modal detector;
+3. fetch any available InsForge community aggregate;
+4. compute or normalize the Slop Score result;
+5. write a verdict-history event when appropriate;
+6. return a stable response to the extension.
+
+This makes Runtype useful in a non-stupid way: it is not "another LLM glued on top." It is the orchestration and evaluation layer that coordinates detector calls, community signal, data cleaning, learning workflows, and promotion gates.
+
+### 5. Modal detector
+
+Modal hosts the Imbue/Qwen text detector because local inference was too RAM-heavy for a reliable demo.
+
+Expected endpoints:
+
+```text
+GET /health
+POST /score
+```
+
+Expected `/score` output:
+
+```ts
+interface ScoreResponse {
+  ok: boolean;
+  detectorScore: number | null;
+  evidenceCoverage: number;
+  labelRecommendation: "red" | "yellow" | "green" | "gray";
+  reasons: string[];
+  modalityScores: {
+    text?: ModalityScore;
+    image?: ModalityScore;
+    audio?: ModalityScore;
+    video?: ModalityScore;
+  };
+  modelName: string;
+  modelVersion: string;
+  errorCode?: string;
+}
+```
+
+If Modal cold-starts or reloads the model, the UI should show a graceful loading/gray state rather than throwing extension errors.
+
+### 6. InsForge backend
+
+InsForge replaces Supabase.
+
+Responsibilities:
+
+- content identity records;
+- explicit community votes;
+- reviewer quality/reputation;
+- appeals;
+- verdict history;
+- aggregate community scores;
+- training-data candidate metadata;
+- cleaned dataset batches;
+- model registry records;
+- eval results;
+- backend secrets.
+
+The InsForge project currently linked to this directory is:
+
+```text
+Project: slop_frog
+API base: https://5gubegn5.us-east.insforge.app
+```
+
+Do not hard-code service keys in extension code.
+
+## Shared contracts
 
 ### `Post_Envelope`
 
@@ -67,9 +205,10 @@ type Platform = "x" | "linkedin";
 interface PostEnvelope {
   platform: Platform;
   contentKey: string;
-  tweetId?: string;
+  postId?: string;
   url?: string;
   authorHandle?: string;
+  authorDisplayName?: string;
   visibleText: string;
   normalizedText: string;
   textHash?: string;
@@ -87,36 +226,8 @@ interface ScoreRequest {
     evidenceCoverageMinimum: number;
     redThreshold: number;
     yellowThreshold: number;
+    includeCommunity: boolean;
   };
-}
-```
-
-### `Score_Response`
-
-```ts
-type FlagLabel = "red" | "yellow" | "green" | "gray";
-
-interface ScoreResponse {
-  ok: boolean;
-  detectorScore?: number;
-  evidenceCoverage: number;
-  labelRecommendation: FlagLabel;
-  reasons: string[];
-  modalityScores: {
-    text?: ModalityScore;
-    image?: ModalityScore;
-    audio?: ModalityScore;
-    video?: ModalityScore;
-  };
-  modelName: string;
-  modelVersion: string;
-  errorCode?: string;
-}
-
-interface ModalityScore {
-  status: "available" | "unsupported" | "not_enough_signal" | "error";
-  score?: number;
-  reason?: string;
 }
 ```
 
@@ -126,14 +237,22 @@ interface ModalityScore {
 interface CommunityAggregate {
   contentKey: string;
   voteCount: number;
-  weightedAiScore: number | null;
+  communityScore: number | null;
   looksAiWeight: number;
   looksHumanWeight: number;
   unsureWeight: number;
   appealStatus?: "none" | "submitted" | "under_review" | "accepted" | "rejected";
-  latestVerdictLabel?: FlagLabel;
   updatedAt?: string;
 }
+```
+
+Community scoring:
+
+```text
+looks_human = 0
+unsure = 50
+looks_ai = 100
+communityScore = weighted average using reviewer quality
 ```
 
 ### `Slop_Score_Result`
@@ -141,251 +260,78 @@ interface CommunityAggregate {
 ```ts
 interface SlopScoreResult {
   contentKey: string;
-  label: FlagLabel;
+  label: "red" | "yellow" | "green" | "gray";
   slopScore: number | null;
   detectorScore: number | null;
   communityScore: number | null;
   evidenceCoverage: number;
   reasons: string[];
+  modelName?: string;
+  modelVersion?: string;
   autoFiltered: boolean;
 }
 ```
 
-### UI action contracts
-
-The compact X post controls are separate by contract. The flag opens evidence. Feedback and appeal open their own focused panels.
-
-```ts
-type SlopControlKind = "evidence" | "feedback" | "appeal";
-type PanelKind = "evidence" | "feedback" | "appeal";
-type SlopIconName = "Flag" | "MessageSquareCheck" | "ShieldAlert";
-
-interface SlopControl {
-  kind: SlopControlKind;
-  icon: SlopIconName;
-  tooltip: string;
-  ariaLabel: string;
-  visibleLabel?: string;
-  opens: PanelKind;
-}
-```
-
-The evidence panel contract intentionally excludes feedback and appeal controls. Those actions are represented by `FeedbackPanelModel` and `AppealPanelModel`, not nested inside evidence.
-
-## Runtime Flow
-
-### 1. Feed extraction
-
-The Content_Script uses a `MutationObserver` and viewport scanning to find X post containers. For each candidate, it extracts visible text, author handle, URL/permalink, tweet ID when possible, and image URLs. It normalizes text by trimming whitespace, lowering casing for hash input, and removing volatile UI text when possible.
-
-Extraction failures return a gray result rather than throwing into the page.
-
-### 2. Local scoring
-
-The Background_Worker sends a `Score_Request` to `http://localhost:8765/score`. The Local_Detector_Service returns a `Score_Response`.
-
-For the hackathon, the detector can be implemented in layers:
-
-1. Try the Bouncer-inspired detector path if available.
-2. If unavailable, use a deterministic heuristic scoring function.
-3. Always return a typed response, even on error.
-
-The heuristic fallback exists only so integration and UI can be verified before model integration is perfect.
-
-### 3. Community lookup
-
-The Background_Worker requests the community aggregate for `contentKey` from Supabase. If Supabase is unavailable, the extension still displays the local detector result and marks community data unavailable in the Evidence_Panel.
-
-### 4. Slop Score calculation
-
-The Slop Score engine runs locally in the extension:
+### Slop Score calculation
 
 ```text
-if score_response.labelRecommendation == "gray":
-  label = "gray"
+if evidenceCoverage < minimum:
+  label = gray
+else if detector unavailable:
+  label = gray
 else:
-  communityScore = aggregate.weightedAiScore if available
-  slopScore = 0.75 * detectorScore + 0.25 * communityScore
-  if communityScore is missing: slopScore = detectorScore
-  label = threshold(slopScore)
+  if communityScore exists:
+    slopScore = detectorWeight * detectorScore + communityWeight * communityScore
+  else:
+    slopScore = detectorScore
+
+  red if slopScore > 75
+  yellow if 40 <= slopScore <= 75
+  green if slopScore < 40
 ```
 
-Default thresholds:
+The visible flag must update when a feedback submission changes the Slop Score across a threshold.
 
-- red: score above 75;
-- yellow: score from 40 to 75 inclusive;
-- green: score below 40;
-- gray: evidence unavailable or insufficient, not score-based.
+## UI design
 
-### 5. Flag insertion and auto-filtering
+UI rules live in [`ui.md`](ui.md). The important current requirements:
 
-The Content_Script inserts a compact flag control into the post container. If auto-filter is enabled and the final label is red, the post is collapsed with a reveal control.
+- controls should sit near the bottom-left/bottom action area without colliding with native buttons;
+- flag uses the flag color;
+- feedback icon should be white for contrast;
+- appeal icon should be white for contrast;
+- evidence, feedback, and appeal are separate panels;
+- evidence panel must be closable;
+- auto-filter is off by default;
+- red post blocker must be compact and removable when auto-filter is disabled;
+- popup should be polished and not expose noisy developer controls by default.
 
-### 6. Community vote and appeal
-
-When the user votes or appeals, the extension sends the explicit action to Supabase. Normal feed browsing does not upload every post as a vote. For the MVP, text may be stored only for explicitly labeled posts. Raw media is not stored.
-
-## Module Layout
-
-```text
-extension/
-  manifest.json
-  src/
-    content/
-      platformRegistry.ts
-      adapters/
-        xAdapter.ts
-        linkedinAdapter.ts
-      flagUi.ts
-      evidencePanel.ts
-    background/
-      index.ts
-      localDetectorClient.ts
-      supabaseClient.ts
-      slopScore.ts
-      cache.ts
-    popup/
-      popup.html
-      popup.ts
-      popup.css
-    shared/
-      contracts.ts
-      thresholds.ts
-
-local-detector/
-  app.py
-  scorer.py
-  schemas.py
-  requirements.txt
-  README.md
-
-supabase/
-  schema.sql
-  seed.sql
-
-specs/slop-frog/
-  requirements.md
-  design.md
-  tasks.md
-```
-
-## Chrome Extension Design
-
-### Manifest permissions
-
-The MVP should request only:
-
-```json
-{
-  "permissions": ["storage"],
-  "host_permissions": [
-    "https://x.com/*",
-    "https://twitter.com/*",
-    "http://localhost:8765/*",
-    "https://YOUR_SUPABASE_PROJECT.supabase.co/*"
-  ]
-}
-```
-
-No `all_urls` permission. No blanket access to every website.
-
-### Content script
-
-Responsibilities:
-
-- select the correct platform adapter for the current site;
-- detect X/Twitter or LinkedIn posts with adapter-specific selectors;
-- extract `Post_Envelope`;
-- render compact Slop Frog flags as described in `ui.md`;
-- render the inline evidence panel;
-- render separate feedback and appeal panels;
-- collapse red posts when auto-filter is enabled;
-- observe new posts while scrolling.
-
-### Background worker
-
-Responsibilities:
-
-- receive extracted posts from content script;
-- deduplicate by `contentKey`;
-- call local detector;
-- call Supabase;
-- compute Slop Score result;
-- cache results;
-- send final result back to content script.
-
-### Popup/options UI
-
-Minimum controls:
-
-- detector health status;
-- Supabase connection status;
-- show numeric score toggle;
-- auto-filter red posts toggle;
-- local detector URL display.
-
-## Local Detector Design
-
-The local detector is a FastAPI service.
-
-Endpoints:
-
-```text
-GET /health
-POST /score
-```
-
-`GET /health` returns:
-
-```json
-{
-  "ok": true,
-  "modelName": "slop-frog-local-demo",
-  "modelVersion": "0.1.0"
-}
-```
-
-`POST /score` returns the shared `Score_Response`.
-
-Evidence coverage starts with text length:
-
-```text
-40 points: at least 20 analyzable words
-20 points: 8 to 19 analyzable words
-30 points: analyzable image present
-30 points: known fingerprint match
-20 points: community aggregate exists
-10 points: provenance metadata exists
-```
-
-For the MVP, text alone can be enough if it has at least 30 analyzable words. Short posts should become gray unless a known fingerprint or community signal exists.
-
-## Supabase Design
-
-Tables:
+## Data model
 
 ### `content_items`
 
-Stores identity and optional explicitly labeled text.
+Stores identity and limited explicitly labeled content metadata.
 
 ```sql
 content_key text primary key,
 platform text not null,
-tweet_id text,
+post_id text,
 url text,
 text_hash text,
 text_snapshot text,
-author_handle text,
+author_handle_hash text,
 created_at timestamptz default now(),
 updated_at timestamptz default now()
 ```
+
+`text_snapshot` is allowed only for explicit labeled examples and should be cleaned before training use.
 
 ### `reviewers`
 
 ```sql
 reviewer_id text primary key,
 display_name text,
-reputation_weight numeric not null default 0.25,
+quality_weight numeric not null default 0.25,
 review_count integer not null default 0,
 created_at timestamptz default now()
 ```
@@ -427,77 +373,152 @@ metadata jsonb,
 created_at timestamptz default now()
 ```
 
-### `community_aggregates` view
+### `training_candidates`
 
-This view computes weighted community score:
-
-```text
-looks_ai = 100
-unsure = 50
-looks_human = 0
-weightedAiScore = sum(vote_score * reviewer_weight) / sum(reviewer_weight)
+```sql
+id uuid primary key default gen_random_uuid(),
+content_key text references content_items(content_key),
+source_event text not null,
+label text,
+cleaning_status text not null default 'pending',
+pii_risk text not null default 'unknown',
+created_at timestamptz default now()
 ```
 
-## Training Pipeline Placeholder
+### `dataset_batches`
 
-The architecture reserves a future backend job:
+```sql
+id uuid primary key default gen_random_uuid(),
+status text not null,
+candidate_count integer not null default 0,
+cleaning_report jsonb,
+created_at timestamptz default now()
+```
+
+### `model_registry`
+
+```sql
+id uuid primary key default gen_random_uuid(),
+model_name text not null,
+model_version text not null,
+modal_endpoint text,
+eval_status text not null,
+promoted boolean not null default false,
+metadata jsonb,
+created_at timestamptz default now()
+```
+
+## Learning loop
+
+The future learning loop should be described as human-in-the-loop detector improvement, not reckless automatic RL.
 
 ```mermaid
 graph LR
-    Labels[Supabase labels] --> Select[Quality filter]
-    Select --> Dataset[Training dataset]
-    Dataset --> Train[Detector training]
-    Train --> Eval[Evaluation]
-    Eval --> Release[New local model package]
+    Votes[Votes + appeals] --> Candidates[Training candidates]
+    Candidates --> Clean[PII cleaning]
+    Clean --> Batch[Dataset batch]
+    Batch --> Train[Fine-tune / LoRA job]
+    Train --> Eval[Runtype eval suites]
+    Eval --> Review[Human approval]
+    Review --> Promote[Modal detector promotion]
 ```
 
-For the MVP, this entire lane is inactive. No backend job fetches X posts. No scheduled training runs. No automatic media collection. The only data written is data created by explicit user labeling or appeal actions.
+Runtype's role:
 
-## Testing Strategy
+- start the batch-preparation workflow;
+- coordinate cleaning checks;
+- trigger or track Modal training/eval jobs;
+- run eval suites;
+- block promotion if evals fail;
+- keep a workflow trail for judges.
 
-### Shared contract tests
+InsForge's role:
 
-- Validate fixture `Post_Envelope` objects.
-- Validate `Score_Request` and `Score_Response`.
-- Validate Slop Score thresholds.
-- Validate gray vs green distinction.
+- store labeled candidates;
+- store cleaning status;
+- store dataset batch metadata;
+- store model versions;
+- store eval results.
 
-### Extension verification
+Modal's role:
 
-- Load unpacked extension in Chrome.
-- Confirm content script runs only on X/Twitter.
-- Confirm at least three visible posts receive a flag.
-- Confirm newly loaded posts are detected while scrolling.
-- Confirm popup shows detector health status.
-- Confirm red auto-filter can collapse and reveal a post.
+- run heavy model inference;
+- optionally run future fine-tuning/eval jobs.
 
-### Local detector verification
+## Security and privacy
 
-- Run `GET /health`.
-- Run `POST /score` on three fixtures.
-- Confirm short text returns gray.
-- Confirm long/high-risk demo fixture returns red or yellow.
-- Confirm service returns typed error if model path is unavailable.
+The extension must ask for only the host permissions it needs:
 
-### Supabase verification
+```json
+{
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://www.linkedin.com/*",
+    "https://api.runtype.com/*",
+    "https://*.modal.run/*",
+    "https://5gubegn5.us-east.insforge.app/*"
+  ]
+}
+```
 
-- Apply schema.
-- Insert or upsert a demo reviewer.
-- Submit one vote.
-- Fetch aggregate for that content key.
-- Submit one appeal.
-- Confirm verdict history stores an event.
+Rules:
 
-### Integration verification
+- no `<all_urls>` permission;
+- no service keys in extension code;
+- no raw media storage;
+- no backend LinkedIn scraping;
+- no storing every feed item as training data;
+- explicit user votes and appeals can create training-data candidates;
+- training candidates must be cleaned before training use.
 
-- Start local detector.
-- Load extension.
-- Open X.
-- Confirm extension extracts posts.
-- Confirm detector returns scores.
-- Confirm community aggregate is fetched.
-- Confirm Slop Score labels render.
-- Confirm one vote reaches Supabase.
-- Confirm one red post can be auto-filtered.
+## Testing strategy
 
-No implementation task is considered complete until its verification step passes.
+### Extension checks
+
+- Chrome loads unpacked extension without manifest errors.
+- X posts render compact controls.
+- LinkedIn posts render compact controls.
+- The controls do not collide with native action buttons.
+- Evidence panel opens and closes.
+- Feedback and appeal open independently.
+- Auto-filter is off by default.
+- Disabling auto-filter removes current blockers.
+
+### Modal checks
+
+- `GET /health` returns OK.
+- `POST /score` returns a valid score response.
+- Cold-start or unavailable detector does not create uncaught extension errors.
+
+### Runtype checks
+
+- Product exists.
+- `score_post` endpoint accepts fixture payloads.
+- `submit_feedback` endpoint accepts a fixture vote.
+- `submit_appeal` endpoint accepts a fixture appeal.
+- Eval suites exist for scoring, detector regression, and privacy cleaning.
+
+### InsForge checks
+
+- Project is linked.
+- Database query works.
+- Required tables or migrations exist.
+- Secrets are stored server-side.
+- Vote and appeal writes can be verified.
+
+### Demo checks
+
+- Use branch `modal-imbue-inference`.
+- Load extension in Chrome.
+- Confirm Modal detector health.
+- Open X and show flags.
+- Open LinkedIn and show flags if selector stability allows.
+- Open evidence panel.
+- Submit feedback.
+- Submit appeal.
+- Turn auto-filter on and hide a red post.
+- Turn auto-filter off and confirm blocker disappears.
+
+No task is complete until its verification check has passed.

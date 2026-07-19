@@ -2,257 +2,344 @@
 
 ## Overview
 
-This plan implements Slop Frog as a Chrome extension for X and LinkedIn with local laptop inference and Supabase community labeling. The plan is structured for two people working in parallel after a shared-contract phase.
+This plan updates Slop Frog for the AGI Summit hackathon direction. The project is now a solo-builder implementation, not a two-person split. The core product remains a Chrome extension that flags likely AI-generated content while users scroll, but the architecture has changed:
 
-The build order is intentionally strict:
+- X and LinkedIn are the current platform targets.
+- Modal hosts the Imbue/Qwen text detector.
+- Runtype coordinates scoring, feedback, appeals, learning workflows, and eval gates.
+- InsForge replaces Supabase as the backend.
+- Cotal is out of scope.
 
-1. Shared contracts first.
-2. Person A builds the Chrome extension and in-feed UI.
-3. Person B builds the local detector service and Supabase community layer.
-4. One integrator joins the two tracks and verifies the demo path.
+The branch that currently fits this direction best is:
 
-No task may be marked complete until its verification step has passed. Code existing is not enough. A working check is required.
+```text
+modal-imbue-inference
+```
 
-## Ownership
+Work should continue there until the demo path is stable, then merge to `main`.
 
-- **Shared Contract Phase - Both:** Tasks 1 through 4. These must finish before Person A and Person B split work.
-- **Person A - Extension and UX:** Tasks 5 through 9.
-- **Person B - Local Detector and Supabase:** Tasks 10 through 14.
-- **Integrator - Person A or Person B:** Tasks 15 through 18.
+No task may be marked complete until its verification step has passed. "Code exists" is not enough.
+
+## Solo ownership
+
+Owner for all tasks: **Solo Builder**
+
+This means there is no Person A / Person B split. The work is still staged in waves so the product does not turn into spaghetti.
+
+## Task waves
+
+1. Stabilize shared contracts and config.
+2. Stabilize Modal detector access.
+3. Wire Runtype as the product workflow layer.
+4. Migrate backend data paths to InsForge.
+5. Polish extension UI and platform support.
+6. Add learning-loop architecture and eval gates.
+7. Verify and package the demo.
 
 ## Tasks
 
-- [x] 1. Create project skeleton and shared folder layout (Owner: Both)
-  - [x] 1.1 Create top-level implementation folders
-    - Create `extension/`, `extension/src/shared/`, `local-detector/`, and `supabase/`.
-    - Add placeholder README files only if needed to preserve empty folders.
-    - _Requirements: 1.1, 2.1_
-    - **Verification:** `rg --files` shows the expected folders and no implementation code depends on missing paths.
+- [x] 1. Establish current hackathon branch
+  - [x] 1.1 Confirm active branch
+    - Use `modal-imbue-inference` for the new hackathon direction.
+    - _Requirements: 17.1_
+    - **Verification:** `git branch --show-current` returns `modal-imbue-inference`.
 
-- [x] 2. Define shared contracts before parallel work (Owner: Both)
-  - [x] 2.1 Define the shared TypeScript contracts
-    - Create `extension/src/shared/contracts.ts` containing `PostEnvelope`, `ScoreRequest`, `ScoreResponse`, `CommunityAggregate`, `SlopScoreResult`, `FlagLabel`, `ExtensionSettings`, compact UI control contracts, evidence panel model, feedback panel model, and appeal panel model.
-    - _Requirements: 2.1, 2.2, 2.3, 2.4_
-    - **Verification:** The file exports all required types and includes only the four allowed labels: `red`, `yellow`, `green`, `gray`.
+- [ ] 2. Update shared contracts for the new architecture
+  - [ ] 2.1 Update shared TypeScript contracts
+    - Ensure contracts include X and LinkedIn platform values.
+    - Ensure contracts include Runtype/Modal-compatible score request and response fields.
+    - Ensure contracts include feedback, appeal, verdict history, reviewer quality, and modality rows.
+    - _Requirements: 2.1-2.5, 3.1-3.6_
+    - **Verification:** `rg "supabase|localhost:8765|Person A|Person B" extension specs/slop-frog` shows no stale required architecture references except migration/history notes.
 
-  - [x] 2.2 Define thresholds and evidence coverage constants
-    - Create `extension/src/shared/thresholds.ts` with red threshold 75, yellow threshold 40, evidence coverage minimum 50, and localhost URL `http://localhost:8765`.
-    - _Requirements: 5.2, 5.3, 6.4, 6.5_
-    - **Verification:** Both extension code and local detector docs reference the same constants.
+  - [ ] 2.2 Update threshold and gray-state constants
+    - Keep red > 75, yellow 40 through 75, green < 40, gray for insufficient signal.
+    - Ensure auto-filter default is false.
+    - _Requirements: 7.4, 8.1-8.5, 13.1_
+    - **Verification:** Fixture tests or manual score fixtures produce expected red, yellow, green, and gray labels.
 
-  - [x] 2.3 Create fixture posts
-    - Add at least three fixture posts: short gray fixture, medium yellow fixture, and high-risk red fixture.
-    - _Requirements: 2.6, 16.3_
-    - **Verification:** Person A and Person B can both run the same fixture JSON through their side without changing the schema.
+  - [ ] 2.3 Add Runtype and InsForge environment contract
+    - Document required variables for Runtype product API, Modal detector URL, and InsForge backend.
+    - Remove Supabase as the target backend from new setup docs.
+    - _Requirements: 4.8, 5.1-5.8, 6.1-6.7_
+    - **Verification:** `.env.example` contains the current required variable names without secret values.
 
-- [x] 3. Define Supabase contract before UI work (Owner: Both)
-  - [x] 3.1 Create Supabase schema file
-    - Create `supabase/schema.sql` defining `content_items`, `reviewers`, `community_votes`, `appeals`, `verdict_history`, and a community aggregate view.
-    - _Requirements: 9.1, 10.1, 11.2, 12.4_
-    - **Verification:** Schema can be reviewed without missing required columns from requirements.md.
+- [ ] 3. Stabilize Modal detector
+  - [ ] 3.1 Deploy or redeploy Modal detector
+    - Deploy `modal-detector/slop_frog_modal.py`.
+    - Capture the real Modal app URL.
+    - _Requirements: 4.1-4.5_
+    - **Verification:** `curl.exe <MODAL_URL>/health` returns a successful health response.
 
-  - [x] 3.2 Define Supabase environment contract
-    - Document required values: Supabase URL, publishable key, and demo reviewer ID.
-    - _Requirements: 9.1, 14.1_
-    - **Verification:** README or env example names required variables without secret values.
+  - [ ] 3.2 Configure Modal URL everywhere it is needed
+    - Set local env/config for `SLOP_FROG_MODAL_DETECTOR_URL`.
+    - Set Runtype/InsForge secret or workflow variable for the Modal detector URL.
+    - _Requirements: 4.6-4.8, 5.2_
+    - **Verification:** Runtype `score_post` returns a detector-backed response instead of gray placeholder output.
 
-- [x] 4. Define extension permission contract (Owner: Both)
-  - [x] 4.1 Draft Manifest V3 permissions
-    - Include only `storage`, X/Twitter and LinkedIn host permissions, localhost detector permission, and Supabase host permission.
-    - _Requirements: 14.1, 14.2, 14.3_
-    - **Verification:** Manifest does not include `<all_urls>` or unrelated host permissions.
+  - [ ] 3.3 Confirm model identity
+    - Confirm the running detector is using the intended Imbue/Qwen text detector path or compatible artifact.
+    - Record `modelName` and `modelVersion` in responses.
+    - _Requirements: 4.4-4.5_
+    - **Verification:** A `/score` response includes non-placeholder `modelName` and `modelVersion`.
 
-- [ ] 5. Build Chrome extension scaffold (Owner: Person A)
-  - [x] 5.1 Create Manifest V3 extension files
-    - Implement `extension/manifest.json`, content script entry, background worker entry, and popup files.
-    - _Requirements: 1.1, 14.1, 14.4_
-    - **Verification:** Chrome can load the unpacked extension without manifest errors.
+- [ ] 4. Wire Runtype product workflows
+  - [x] 4.1 Create Runtype product and API surface
+    - Product: Slop Frog.
+    - Surface: Slop Frog API.
+    - _Requirements: 5.1_
+    - **Verification:** Runtype API lists the Slop Frog product and API surface.
 
-  - [x] 5.2 Add popup detector status UI
-    - Show local detector URL, detector health status, Supabase status placeholder, score toggle, and auto-filter toggle.
-    - _Requirements: 7.1, 14.4, 14.5_
-    - **Verification:** Opening the extension popup shows the controls and persists toggle changes with `chrome.storage`.
+  - [x] 4.2 Create core Runtype capabilities
+    - `score_post`
+    - `submit_feedback`
+    - `submit_appeal`
+    - `prepare_training_batch`
+    - `evaluate_new_detector`
+    - _Requirements: 5.1-5.6, 16.1-16.6_
+    - **Verification:** Runtype API lists the capabilities.
 
-- [ ] 6. Implement X extraction adapter (Owner: Person A)
-  - [x] 6.1 Detect visible X posts
-    - Use a content script with `MutationObserver` and safe DOM scanning to find post containers while scrolling.
-    - _Requirements: 1.4, 1.5, 3.1_
-    - **Verification:** On X, at least three visible posts are detected and logged or marked without duplicate processing.
+  - [x] 4.3 Create Runtype eval suites
+    - Scoring workflow eval.
+    - Detector regression eval.
+    - Privacy-cleaning eval.
+    - _Requirements: 5.6, 16.4_
+    - **Verification:** Runtype API lists the eval suites.
 
-  - [x] 6.2 Extract `PostEnvelope`
-    - Extract tweet URL/ID when available, visible text, author handle, image URLs, normalized text, text hash, and extraction timestamp.
-    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
-    - **Verification:** Three live X posts produce valid `PostEnvelope` objects matching `contracts.ts`.
+  - [ ] 4.4 Connect extension scoring to Runtype
+    - Route extension scoring through the Runtype `score_post` endpoint as the stable product API.
+    - Keep direct Modal calls available only as a debug fallback.
+    - _Requirements: 5.1-5.8_
+    - **Verification:** A live post score is produced through Runtype, not only direct Modal.
 
-  - [x] 6.3 Handle extraction failures as gray
-    - If a post cannot be parsed, return a gray result with reason `extraction_failed`.
-    - _Requirements: 3.8, 5.6_
-    - **Verification:** A forced malformed fixture produces gray, not a crash.
+  - [ ] 4.5 Connect feedback and appeal to Runtype
+    - Route feedback and appeal submissions through Runtype or through InsForge functions called by Runtype.
+    - _Requirements: 5.3-5.4, 11.1-11.6, 12.1-12.5_
+    - **Verification:** A live feedback submission and appeal submission reach the backend through the intended workflow path.
 
-- [ ] 7. Implement extension background worker (Owner: Person A)
-  - [x] 7.1 Call local detector
-    - Send `ScoreRequest` to `http://localhost:8765/score` and handle success, timeout, and typed errors.
-    - _Requirements: 4.1, 4.3, 4.7, 14.5_
-    - **Verification:** With detector running, background worker receives a score; with detector stopped, popup and post UI show a clear connection error or gray state.
+- [ ] 5. Migrate backend from Supabase to InsForge
+  - [x] 5.1 Link InsForge project
+    - Link project `slop_frog` to this directory.
+    - _Requirements: 6.1_
+    - **Verification:** `npx @insforge/cli current --json` shows the linked `slop_frog` project.
 
-  - [x] 7.2 Add local cache
-    - Cache by `contentKey` so repeated posts are not rescored unnecessarily.
-    - _Requirements: 1.5, 3.7_
-    - **Verification:** The same `contentKey` is not sent to the detector repeatedly during one scroll session.
+  - [ ] 5.2 Create InsForge schema
+    - Add tables for content items, reviewers, community votes, appeals, verdict history, training candidates, dataset batches, model registry, and eval results.
+    - _Requirements: 6.2-6.7, 14.1-14.6, 15.1-15.7, 16.1-16.7_
+    - **Verification:** InsForge SQL query confirms all required tables exist.
 
-  - [x] 7.3 Compute Slop Score result
-    - Implement local Slop Score calculation using detector score and optional community aggregate.
-    - _Requirements: 5.1, 6.1, 6.2, 6.3, 6.4_
-    - **Verification:** Fixture scores produce expected red, yellow, green, and gray labels.
+  - [ ] 5.3 Implement community aggregate query
+    - Compute weighted community score from explicit votes and reviewer quality.
+    - _Requirements: 11.2-11.6, 14.1-14.4_
+    - **Verification:** A fixture with one `looks_ai`, one `looks_human`, and one `unsure` vote returns the expected weighted score.
 
-- [ ] 8. Implement in-feed flag UI (Owner: Person A)
-  - [x] 8.1 Render compact flags on X posts
-    - Insert the compact Slop Frog controls from `specs/slop-frog/ui.md`: flag/evidence, feedback, and appeal. Use quiet icon-first buttons and avoid unnecessary explanatory text.
-    - _Requirements: 6.6, 6.7, 8.8_
-    - **Verification:** At least three X posts show stable flags while scrolling and no text overlaps post content.
+  - [ ] 5.4 Implement feedback write path
+    - Store explicit votes and update/recompute aggregate.
+    - _Requirements: 11.1-11.6_
+    - **Verification:** A feedback action from the extension creates/updates a backend vote and changes visible Slop Score when appropriate.
 
-  - [x] 8.2 Render evidence panel
-    - Show the inline evidence panel from `specs/slop-frog/ui.md`: detector score, Slop Score, community score, modality rows, gray reason, and simple history area. Do not include feedback or appeal controls inside the evidence panel.
-    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
-    - **Verification:** Clicking a flag opens the panel and all required sections render from fixture data.
-
-  - [x] 8.3 Implement auto-filter red posts
-    - Collapse red posts only when auto-filter is enabled and include a reveal control.
-    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
-    - **Verification:** A red fixture collapses only when auto-filter is on; yellow, green, and gray do not collapse.
-
-  - [x] 8.4 Render separate feedback and appeal panels
-    - Feedback opens from the `MessageSquareCheck` icon. Appeal opens from the `ShieldAlert` icon. Each panel asks one focused question and stays separate from evidence.
-    - _Requirements: 8.7, 9.6, 12.1_
-    - **Verification:** Feedback and appeal open from their own buttons, and neither action appears inside the evidence panel.
-
-- [ ] 9. Implement evidence charts in UI (Owner: Person A)
-  - [x] 9.1 Add longitudinal score graph
-    - Render time on x-axis and Slop Score on y-axis using verdict history.
-    - _Requirements: 13.1, 13.2_
-    - **Verification:** Mock verdict history renders a visible chart inside the evidence panel.
-
-  - [x] 9.2 Add volume vs score graph
-    - Render review/repost volume on x-axis and Slop Score on y-axis.
-    - _Requirements: 13.3, 13.4, 13.5_
-    - **Verification:** Mock volume history renders a visible chart inside the evidence panel.
-
-- [ ] 10. Build local detector service scaffold (Owner: Person B)
-  - [x] 10.1 Create FastAPI service
-    - Implement `local-detector/app.py`, `schemas.py`, `scorer.py`, and `requirements.txt`.
-    - _Requirements: 4.1, 4.2, 4.3_
-    - **Verification:** `GET /health` returns ok on `http://localhost:8765/health`.
-
-  - [x] 10.2 Implement schema validation
-    - Validate incoming `ScoreRequest` against the shared contract shape.
-    - _Requirements: 2.1, 4.4, 4.5_
-    - **Verification:** Valid fixture requests pass; malformed requests return typed errors.
-
-- [ ] 11. Implement local scoring logic (Owner: Person B)
-  - [x] 11.1 Implement evidence coverage
-    - Apply text-length coverage and return gray for too little usable signal.
-    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
-    - **Verification:** Short fixture returns gray with reason `not_enough_signal`.
-
-  - [x] 11.2 Implement detector score path
-    - Integrate a local Bouncer-inspired detector if feasible; otherwise implement deterministic heuristic fallback for demo.
-    - _Requirements: 4.4, 4.5, 4.8_
-    - **Verification:** Medium and high-risk fixtures return stable numeric detector scores within 0 to 100.
-
-  - [x] 11.3 Implement local detector error handling
-    - Return typed errors for model unavailable, invalid request, and internal failure.
-    - _Requirements: 4.7, 14.5_
-    - **Verification:** Simulated model failure returns a JSON error response and does not hang.
-
-- [ ] 12. Implement Supabase community layer (Owner: Person B)
-  - [x] 12.1 Apply or validate Supabase schema
-    - Create the required tables and aggregate view.
-    - _Requirements: 9.1, 10.1, 12.4_
-    - **Verification:** A SQL check confirms required tables exist, or local schema review is completed if Supabase credentials are unavailable.
-
-  - [x] 12.2 Implement vote insert/upsert helper
-    - Store explicit community votes with content item identity and reviewer weight.
-    - _Requirements: 9.2, 9.3, 9.4, 9.6_
-    - **Verification:** Submitting a demo vote creates a row in `community_votes`.
-
-  - [x] 12.3 Implement aggregate fetch helper
-    - Return weighted community score for a given `contentKey`.
-    - _Requirements: 9.7, 10.4_
-    - **Verification:** A voted fixture returns a non-null aggregate score.
-
-- [ ] 13. Implement appeals and verdict history (Owner: Person B)
-  - [x] 13.1 Implement appeal insert helper
+  - [ ] 5.5 Implement appeal write path
     - Store appeal reason and status.
-    - _Requirements: 12.1, 12.2, 12.3_
-    - **Verification:** Submitting a demo appeal creates a row in `appeals`.
+    - _Requirements: 12.1-12.5_
+    - **Verification:** An appeal from the extension creates a backend appeal record.
 
-  - [x] 13.2 Implement verdict history insert helper
-    - Store score and label change events.
-    - _Requirements: 12.4, 12.5, 12.7_
-    - **Verification:** A demo vote or appeal creates a `verdict_history` row.
+  - [ ] 5.6 Implement verdict history writes and reads
+    - Store detector score, community score, Slop Score, label, reason, and event type.
+    - Read history for the evidence graph.
+    - _Requirements: 10.7-10.10, 12.5_
+    - **Verification:** A post with one score and one later vote has at least two verdict-history events.
 
-- [ ] 14. Document inactive training placeholder (Owner: Person B)
-  - [x] 14.1 Add future training notes without implementation
-    - Document that backend scraping, rehydration, scheduled jobs, and training are inactive for MVP.
-    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
-    - **Verification:** No code path, cron job, or script attempts to fetch X posts from the backend.
+- [ ] 6. Stabilize X extension UI
+  - [x] 6.1 Keep auto-filter off by default
+    - Existing user settings should migrate away from accidental default-on behavior.
+    - _Requirements: 13.1_
+    - **Verification:** Fresh install and existing install both show auto-filter disabled unless the user explicitly enables it.
 
-- [ ] 15. Integrate extension with local detector (Owner: Integrator)
-  - [x] 15.1 Run end-to-end local scoring
-    - Start local detector, load extension, open X, score live posts.
-    - _Requirements: 4.1, 4.4, 6.6, 16.1, 16.2, 16.3_
-    - **Verification:** At least three X posts receive flags from local detector responses.
+  - [x] 6.2 Remove stale auto-filter blockers when disabled
+    - If the user unchecks auto-filter, visible blockers should disappear.
+    - _Requirements: 13.4_
+    - **Verification:** A hidden red post reappears after auto-filter is turned off.
 
-- [ ] 16. Integrate extension with Supabase (Owner: Integrator)
-  - [x] 16.1 Connect vote action to Supabase
-    - From the evidence panel, submit a community vote and fetch updated aggregate.
-    - _Requirements: 9.1, 9.6, 9.7, 16.5_
-    - **Verification:** A vote submitted from the extension appears in Supabase and changes or creates the aggregate.
+  - [ ] 6.3 Finalize bottom-left/bottom-action placement
+    - The compact controls should sit near the lower-left/bottom action area without pushing X buttons sideways.
+    - _Requirements: 9.1-9.5_
+    - **Verification:** Test at least five X post shapes: text-only, quote post, image post, video post, repost/reply, and confirm no collisions.
 
-  - [x] 16.2 Connect appeal action to Supabase
-    - Submit an appeal from the evidence panel.
-    - _Requirements: 12.1, 12.2, 16.4_
-    - **Verification:** Appeal appears in Supabase and the evidence panel reflects submitted status.
+  - [ ] 6.4 Replace ugly placeholder icons
+    - Use a real flag shape for evidence.
+    - Use a clear white message/feedback icon.
+    - Use a clear white justice/appeal icon.
+    - _Requirements: 9.2-9.4_
+    - **Verification:** Icons are legible on X dark mode and do not look like markdown drawings.
 
-- [ ] 17. Final demo verification (Owner: Integrator)
-  - [x] 17.1 Verify permission posture
-    - Inspect manifest permissions.
-    - _Requirements: 14.1, 14.2, 14.3_
-    - **Verification:** Manifest requests only storage, X/Twitter and LinkedIn hosts, localhost detector, and Supabase host.
+  - [ ] 6.5 Finalize evidence panel behavior
+    - Evidence panel must close.
+    - Opening evidence must not permanently block feedback or appeal actions.
+    - Graphs must use real data or honest single-point/flat states.
+    - _Requirements: 9.7-9.8, 10.1-10.10_
+    - **Verification:** Open/close evidence, then open feedback and appeal on the same post.
 
-  - [x] 17.2 Verify full demo path
-    - Demo local detector health, X and LinkedIn post extraction, flags, evidence panel, community vote, appeal, and red auto-filter.
-    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7_
-    - **Verification:** The full demo path is manually completed once without refreshing or editing code mid-demo.
+  - [ ] 6.6 Polish popup UI
+    - Remove noisy developer fields from the default popup.
+    - Keep detector/community status understandable.
+    - Keep green brand identity while preserving contrast.
+    - _Requirements: 9.6, 9.9-9.10_
+    - **Verification:** Popup is readable, compact, and has no unnecessary explainer text.
 
-- [ ] 18. README and handoff (Owner: Integrator)
-  - [x] 18.1 Write local setup instructions
-    - Explain how to run the local detector, load the unpacked extension, configure Supabase, and demo the product.
-    - _Requirements: 14.6, 16.1, 16.2_
-    - **Verification:** A teammate can follow the README and reach detector health plus loaded extension.
+- [ ] 7. Stabilize LinkedIn support
+  - [ ] 7.1 Verify LinkedIn content script matching
+    - Ensure manifest host permissions and content script matches include LinkedIn.
+    - _Requirements: 1.3, 2.1_
+    - **Verification:** Extension content script runs on LinkedIn feed pages.
 
-## Notes
+  - [ ] 7.2 Implement/repair LinkedIn adapter selectors
+    - Extract visible LinkedIn post text and metadata into the same `Post_Envelope` shape.
+    - _Requirements: 2.3-2.5_
+    - **Verification:** At least three LinkedIn feed posts produce valid envelopes.
 
-- Tasks marked complete must have their verification line satisfied.
-- Do not mark UI work complete without loading the extension in Chrome.
-- Do not mark detector work complete without hitting the localhost endpoint.
-- Do not mark Supabase work complete without inserting or fetching real data, unless credentials are unavailable; in that case, clearly mark the task blocked, not complete.
-- Do not implement backend X scraping or training jobs in the MVP.
-- Local heuristic scoring is acceptable only as a temporary demo fallback if model integration threatens the deadline.
+  - [ ] 7.3 Render LinkedIn compact controls
+    - Add controls without colliding with LinkedIn buttons.
+    - _Requirements: 1.3, 9.1-9.5_
+    - **Verification:** At least three LinkedIn posts show flags.
 
-## Task Dependency Graph
+- [ ] 8. Fix score-update correctness
+  - [ ] 8.1 Update flag color after community vote
+    - If voting changes Slop Score from green to yellow/red or vice versa, update the visible flag immediately.
+    - _Requirements: 7.5, 11.5_
+    - **Verification:** Fixture or live vote changes visible flag color without page refresh.
+
+  - [ ] 8.2 Fix community score formatting
+    - Remove stray `.0` or formatting artifacts.
+    - _Requirements: 11.6_
+    - **Verification:** Community score renders as a clean integer/label in evidence panel.
+
+  - [ ] 8.3 Make graphs honest
+    - If only one verdict-history event exists, show a flat/single-point state.
+    - If no real history exists, show unavailable instead of fake trend movement.
+    - _Requirements: 10.7-10.10_
+    - **Verification:** One-event fixture does not render fake rising graph.
+
+- [ ] 9. Implement privacy-safe learning-loop foundation
+  - [ ] 9.1 Store training candidates only from explicit labels
+    - Votes and appeals may create candidates.
+    - Passive scrolling must not create training examples.
+    - _Requirements: 15.1-15.7, 16.1-16.3_
+    - **Verification:** Scoring a post without voting does not create a training candidate.
+
+  - [ ] 9.2 Add PII-cleaning metadata
+    - Track cleaning status and PII risk for each candidate.
+    - _Requirements: 15.5-15.7, 16.3_
+    - **Verification:** Candidate records include cleaning status before dataset batch membership.
+
+  - [ ] 9.3 Add dataset batch workflow placeholder
+    - Runtype `prepare_training_batch` should select cleaned candidates and create a batch record.
+    - _Requirements: 16.1-16.4_
+    - **Verification:** Running the workflow on fixtures produces a batch metadata record, not a full training job.
+
+  - [ ] 9.4 Add eval-gated promotion design
+    - Runtype `evaluate_new_detector` should record eval results before model promotion.
+    - _Requirements: 16.4-16.7_
+    - **Verification:** A candidate model cannot be marked promoted unless eval status is passing and approval is recorded.
+
+- [ ] 10. Clean documentation for judges
+  - [x] 10.1 Update README project description
+    - Explain Slop Frog from the safety/user perspective.
+    - Include detector, community feedback, Slop Score, contestability, and data minimization.
+    - _Requirements: 17.1-17.10_
+    - **Verification:** README contains the updated project description.
+
+  - [ ] 10.2 Update setup instructions
+    - Explain Modal deployment/health check.
+    - Explain Runtype product key vs admin key.
+    - Explain InsForge backend setup.
+    - Explain loading the unpacked extension.
+    - _Requirements: 4.8, 5.1-5.8, 6.1-6.7, 17.1-17.10_
+    - **Verification:** A fresh reader can reach Modal health and load the extension using docs only.
+
+  - [ ] 10.3 Add demo script
+    - Create a short demo path for judges.
+    - Include X, LinkedIn if stable, evidence, feedback, appeal, and auto-filter opt-in.
+    - _Requirements: 17.2-17.10_
+    - **Verification:** Demo can be completed once without editing code mid-demo.
+
+- [ ] 11. Final demo verification
+  - [ ] 11.1 Run extension syntax checks
+    - Run existing extension verification commands.
+    - _Requirements: 1.1-1.6_
+    - **Verification:** `node --check` and existing verification script pass.
+
+  - [ ] 11.2 Run Modal health and score checks
+    - Verify `/health` and `/score`.
+    - _Requirements: 4.1-4.8_
+    - **Verification:** Both endpoints return successful responses.
+
+  - [ ] 11.3 Run Runtype workflow checks
+    - Verify score, feedback, and appeal endpoints.
+    - _Requirements: 5.1-5.8_
+    - **Verification:** All three endpoints return successful non-placeholder responses.
+
+  - [ ] 11.4 Run InsForge backend checks
+    - Verify schema, vote write, appeal write, aggregate read, and verdict-history read.
+    - _Requirements: 6.1-6.7, 11.1-11.6, 12.1-12.5_
+    - **Verification:** Backend rows exist and match expected fixture output.
+
+  - [ ] 11.5 Run live browser demo
+    - Load extension.
+    - Open X.
+    - Open LinkedIn if stable.
+    - Show flags, evidence, feedback, appeal, auto-filter on, auto-filter off.
+    - _Requirements: 17.1-17.10_
+    - **Verification:** Full demo path completes once without refresh-or-code-edit rescue.
+
+## Dependency graph
 
 ```json
 {
+  "owner": "solo_builder",
+  "branch": "modal-imbue-inference",
   "waves": [
-    { "id": 0, "name": "Shared contracts", "tasks": ["1.1", "2.1", "2.2", "2.3", "3.1", "3.2", "4.1"] },
-    { "id": 1, "name": "Parallel foundations", "tasks": ["5.1", "5.2", "10.1", "10.2", "12.1"] },
-    { "id": 2, "name": "Parallel core implementation", "tasks": ["6.1", "6.2", "6.3", "7.1", "7.2", "11.1", "11.2", "11.3", "12.2", "12.3"] },
-    { "id": 3, "name": "Parallel product features", "tasks": ["7.3", "8.1", "8.2", "8.3", "8.4", "9.1", "9.2", "13.1", "13.2", "14.1"] },
-    { "id": 4, "name": "Integration", "tasks": ["15.1", "16.1", "16.2"] },
-    { "id": 5, "name": "Final verification", "tasks": ["17.1", "17.2", "18.1"] }
+    {
+      "id": 0,
+      "name": "Contracts and configuration",
+      "tasks": ["1.1", "2.1", "2.2", "2.3"]
+    },
+    {
+      "id": 1,
+      "name": "Detector and workflow foundation",
+      "tasks": ["3.1", "3.2", "3.3", "4.1", "4.2", "4.3", "5.1"]
+    },
+    {
+      "id": 2,
+      "name": "Product API and backend wiring",
+      "tasks": ["4.4", "4.5", "5.2", "5.3", "5.4", "5.5", "5.6"]
+    },
+    {
+      "id": 3,
+      "name": "Extension polish and platform support",
+      "tasks": ["6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "7.1", "7.2", "7.3", "8.1", "8.2", "8.3"]
+    },
+    {
+      "id": 4,
+      "name": "Learning loop and documentation",
+      "tasks": ["9.1", "9.2", "9.3", "9.4", "10.1", "10.2", "10.3"]
+    },
+    {
+      "id": 5,
+      "name": "Final verification",
+      "tasks": ["11.1", "11.2", "11.3", "11.4", "11.5"]
+    }
   ],
-  "split_rule": "Person A and Person B do not split implementation until every wave 0 task is verified.",
-  "completion_rule": "A task is complete only when its verification step has passed."
+  "completion_rule": "A task is complete only when its verification step has passed.",
+  "merge_rule": "Merge modal-imbue-inference into main only after wave 5 passes."
 }
 ```
+
+## Notes
+
+- Keep committing small verified changes.
+- Do not commit `.env`, `.insforge`, CRX/PEM files, screenshots, or unrelated notes.
+- Do not claim image/audio/video AI detection exists until a real multimodal detector is integrated.
+- Do not reintroduce Supabase into the target architecture.
+- Do not build Cotal usage unless the product direction changes.
+- If Modal is cold, warn the user gracefully.
+- If Runtype uses a testing API key, it is fine for demo but production needs a production key.

@@ -2,385 +2,244 @@
 
 ## What the user sees
 
-Slop Frog should feel like a small trust layer added to X, not a separate app. The user scrolls normally. Each scored post gets a compact Slop Frog flag near the post actions or upper-right area of the post container.
+Slop Frog should feel like a small trust layer added to X and LinkedIn, not a separate app. The user scrolls normally. Each supported post gets a compact Slop Frog control group near the lower-left/bottom action area of the post.
 
-UI work must use the Impeccable design skill guidance. The extension should avoid generic AI-looking UI patterns, unnecessary explanatory copy, oversized cards, and text-heavy panels.
+The UI must avoid generic AI-looking product patterns: too much text, big explanatory boxes, awkward badges, random icon choices, and panels that collide with the platform's native controls.
 
-The most important UI rule is: **less text unless the user is answering a question.** A good product does not explain every obvious surface. Social apps do not label the home button with "Here is the homepage where posts from other users appear." Slop Frog should use clear compact buttons, familiar icons, short labels, and tooltips. Too much explanatory text makes the product feel AI-generated.
+The most important UI rule is: **less text unless the user is answering a question.** Social apps do not explain obvious controls with paragraphs. Slop Frog should use recognizable icons, clear color, short tooltips, and tight spacing.
 
-The default UI is intentionally small:
+Default control group:
 
 ```text
-+----------------------------------------------+
-| @author                                      |
-| This is the X post text...                   |
-|                                              |
-| [reply] [repost] [like]   [Yellow] [F] [A]   |
-+----------------------------------------------+
+[colored flag] [feedback icon] [appeal icon]
 ```
 
-The compact controls are:
+The three controls are separate:
 
-- flag button: opens evidence only;
-- feedback button: opens community feedback only;
-- appeal button: opens appeal flow only.
+- flag opens evidence only;
+- feedback opens community feedback only;
+- appeal opens appeal only.
 
-The buttons should be simple, quiet, and non-distracting. Use icons with short accessible labels and hover/tooltips. Do not put long explanatory text beside every icon.
+## Icon direction
 
-Recommended lucide icons:
+The icons should look like real app icons, not markdown-drawn placeholders.
 
-- flag/evidence: `Flag`;
-- feedback: `MessageSquareCheck`;
-- appeal: `ShieldAlert`.
+### Flag / evidence
 
-Fallback labels if icons are unavailable:
+- Use a real flag silhouette.
+- The icon/fill follows the current label color:
+  - red for red;
+  - yellow for yellow;
+  - green for green;
+  - neutral gray for gray.
+- Tooltip: `View evidence`.
 
-- `Flag`;
-- `Feedback`;
-- `Appeal`.
+### Feedback
 
-## Compact flag states
+- Use a clean message or chat-bubble icon.
+- Icon should be white for contrast on dark or dark-green backgrounds.
+- Green can be used for the button border or hover state.
+- Tooltip: `Add feedback`.
+
+### Appeal
+
+- Use a justice scale or shield/appeal icon.
+- Icon should be white for contrast on dark or dark-green backgrounds.
+- Green can be used for the button border or hover state.
+- Tooltip: `Appeal label`.
+
+## Flag states
 
 ### Red
 
-Text:
-
-```text
-Slop Frog: Red
-```
-
-Meaning:
-
-```text
-Strong AI evidence
-```
+Meaning: high Slop Score.
 
 Behavior:
 
-- if auto-filter is off, the post remains visible;
-- if auto-filter is on, the post collapses;
+- post remains visible unless auto-filter is enabled;
+- if auto-filter is enabled, the post collapses;
 - user can always reveal the post;
-- clicking the flag opens the evidence panel.
+- clicking the flag opens evidence.
 
 ### Yellow
 
-Text:
-
-```text
-Slop Frog: Yellow
-```
-
-Meaning:
-
-```text
-Mixed or medium AI evidence
-```
+Meaning: medium or mixed Slop Score.
 
 Behavior:
 
 - post remains visible;
-- clicking opens the evidence panel.
+- clicking the flag opens evidence.
 
 ### Green
 
-Text:
-
-```text
-Slop Frog: Green
-```
-
-Meaning:
-
-```text
-Low AI evidence
-```
+Meaning: low Slop Score.
 
 Behavior:
 
 - post remains visible;
-- numeric Slop Score stays hidden unless the user enables scores.
+- raw number stays hidden unless the user opens evidence or enables score display.
 
 ### Gray
 
-Text:
-
-```text
-Slop Frog: Gray
-```
-
-Meaning:
-
-```text
-Not enough signal
-```
+Meaning: not enough signal or scoring unavailable.
 
 Behavior:
 
 - post remains visible;
-- evidence panel explains why no score was produced;
-- gray must never be treated as green.
+- evidence explains the gray reason;
+- gray must never be treated as human.
 
 Common gray reasons:
 
 - post text is too short;
-- local detector is not running;
-- post extraction failed;
-- media type is unsupported;
-- detector timed out.
+- detector workflow unavailable;
+- Modal cold start or timeout;
+- extraction failed;
+- media-only post unsupported;
+- unsupported modality.
 
-## Compact action buttons
+## Placement rules
 
-The three controls should sit together and stay visually lighter than X's native action row.
+The controls should be placed near the post's lower-left/bottom action area without pushing native buttons sideways.
 
-```text
-[Yellow] [MessageSquareCheck] [ShieldAlert]
-```
+Rules:
 
-The user should be able to figure out the basic interaction from the icons, placement, and tooltip. The UI should not say things like "Click here to provide community feedback on whether this post is AI-generated" unless the user has opened the feedback form.
+- do not insert controls in the middle of the post body;
+- do not cover media;
+- do not squeeze reply/repost/like/share controls;
+- do not float a giant panel over unrelated posts;
+- prefer an absolutely positioned or visually independent cluster when native action-row insertion causes collisions;
+- test text-only posts, quote posts, image posts, video posts, replies, and reposts.
 
-### Flag button
+## Evidence panel
 
-Purpose:
+Clicking the flag opens evidence. The evidence panel is for explanation only; it must not include voting or appeal actions.
 
-```text
-Open evidence
-```
-
-Icon:
-
-```text
-Flag
-```
-
-Visible text:
-
-```text
-Red
-Yellow
-Green
-Gray
-```
-
-Tooltip:
-
-```text
-View Slop Score evidence
-```
-
-### Feedback button
-
-Purpose:
-
-```text
-Submit community label
-```
-
-Icon:
-
-```text
-MessageSquareCheck
-```
-
-Visible text:
-
-```text
-None by default, icon only
-```
-
-Tooltip:
-
-```text
-Add feedback
-```
-
-### Appeal button
-
-Purpose:
-
-```text
-Challenge the label
-```
-
-Icon:
-
-```text
-ShieldAlert
-```
-
-Visible text:
-
-```text
-None by default, icon only
-```
-
-Tooltip:
-
-```text
-Appeal label
-```
-
-## Expanded evidence panel
-
-When the user clicks the compact flag, the post expands a small inline panel below the flag.
-
-```text
-+----------------------------------------------+
-| Slop Frog Evidence                           |
-|                                              |
-| Slop Score: 82                               |
-| Flag: Red                                    |
-|                                              |
-| Local detector: 88                           |
-| Community: 64 from 12 reviews                |
-| Text: Strong AI evidence                     |
-| Image: Not available                         |
-| Audio: Unsupported                           |
-| Video: Unsupported                           |
-|                                              |
-| Why: polished generic phrasing, low entropy  |
-|                                              |
-| Score over time:     _/--                    |
-| Volume vs score:    . . * *                  |
-+----------------------------------------------+
-```
-
-The panel should show:
+The panel shows:
 
 - Slop Score;
-- flag state;
-- local detector score;
-- community score and vote count;
-- modality rows for text, image, audio, and video;
+- detector score;
+- community score;
+- text/image/audio/video rows;
 - gray reason when gray;
-- simple score-over-time graph;
-- simple volume-vs-score graph.
+- model name/version when available;
+- score-over-time graph;
+- volume-vs-score graph.
 
-The evidence panel must not include feedback voting controls or appeal controls. Those are separate actions beside the flag.
+Graph honesty rules:
+
+- if verdict history exists, use real history;
+- if only one event exists, show a single point or flat line;
+- if no real history exists, show unavailable;
+- never render fake upward movement just to make the UI feel alive.
+
+The evidence panel must:
+
+- be closable;
+- not trap clicks;
+- not permanently block feedback or appeal;
+- stay compact enough for feed browsing.
 
 ## Feedback panel
 
-When the user clicks the feedback icon, open a small focused panel. This is the place where a question is appropriate, so a little text is allowed.
+Clicking feedback opens a focused panel with one question.
 
 ```text
-+----------------------------------------------+
-| Community feedback                           |
-| What do you think?                           |
-|                                              |
-| [Looks AI] [Looks human] [Unsure]            |
-|                                              |
-| [Submit]                                     |
-+----------------------------------------------+
+Community feedback
+What do you think?
+
+[Looks AI] [Looks human] [Unsure]
 ```
 
 Rules:
 
-- keep the first version to one question;
-- make the three choices large enough to tap/click;
+- this is the one place where a short question is okay;
 - do not show detector details here;
-- optional notes can be added later, but should not be visible by default.
+- keep the choices large enough to click;
+- after submission, update the Slop Score and visible flag if the threshold changes.
 
 ## Appeal panel
 
-When the user clicks the appeal icon, open a separate focused panel.
+Clicking appeal opens a focused panel with one question.
 
 ```text
-+----------------------------------------------+
-| Appeal label                                 |
-| Why is this wrong?                           |
-|                                              |
-| [Human-written]                              |
-| [AI-assisted, not fully AI]                  |
-| [Missing context]                            |
-| [Other]                                      |
-|                                              |
-| [Submit appeal]                              |
-+----------------------------------------------+
+Appeal label
+Why is this wrong?
+
+[Human-written]
+[AI-assisted]
+[Missing context]
+[Other]
 ```
 
 Rules:
 
-- keep appeal separate from community feedback;
-- ask one clear question;
-- use short answer choices;
-- do not bury the appeal action inside the evidence panel.
+- keep appeal separate from feedback;
+- use short choices;
+- do not bury appeal inside evidence;
+- after submission, show submitted/under-review status when available.
 
 ## Red auto-filter state
 
-If auto-filter is enabled and a post is red, the post becomes a collapsed warning row:
+Auto-filter must be off by default. If enabled, only red posts collapse.
+
+Collapsed state should be compact:
 
 ```text
-+----------------------------------------------+
-| Slop Frog hid this post                      |
-| Reason: Red flag, strong AI evidence         |
-| Slop Score: 82                               |
-| [Show post] [Open evidence]                  |
-+----------------------------------------------+
+Slop Frog hid this post
+Red flag - 93
+[Show post] [Evidence]
 ```
 
 Rules:
 
-- only red posts collapse;
-- yellow, green, and gray stay visible;
-- the user can reveal the original post;
-- the collapsed state must not remove the ability to vote or appeal.
+- no huge pale block;
+- no awkward multi-line warning wall;
+- user can reveal the original post;
+- disabling auto-filter removes current blockers;
+- yellow, green, and gray never collapse in the MVP.
 
 ## Extension popup
 
-The popup is the control center. It appears when the user clicks the Chrome extension icon.
+The popup is a simple control center, not a developer settings page.
 
-```text
-+------------------------------+
-| Slop Frog                    |
-|                              |
-| Local detector: Connected    |
-| Supabase: Connected          |
-|                              |
-| Show numeric Slop Score  [ ] |
-| Auto-filter red posts    [ ] |
-|                              |
-| Detector URL                 |
-| http://localhost:8765        |
-+------------------------------+
-```
+It should show:
 
-Minimum popup controls:
-
-- local detector health status;
-- Supabase connection status;
+- Slop Frog branding with green identity;
+- detector/workflow status;
+- community/backend status;
 - show numeric Slop Score toggle;
-- auto-filter red posts toggle;
-- local detector URL.
+- auto-filter red posts toggle.
 
-## Local detector offline state
+It should not show by default:
 
-If the local detector is not running, the extension should not fail silently.
+- raw localhost URLs;
+- long setup text;
+- noisy developer diagnostics;
+- unnecessary explanatory copy.
 
-The popup should show:
-
-```text
-Local detector: Not connected
-Start the local detector at http://localhost:8765
-```
-
-The feed should show gray flags or a small status message:
-
-```text
-Slop Frog: Gray
-Local detector unavailable
-```
+Advanced/debug information can be hidden behind a small secondary action later.
 
 ## Visual direction
 
-Slop Frog should look restrained and trustworthy. It should not look like a giant warning system pasted over X.
+Slop Frog should feel compact, green, slightly playful, and trustworthy.
 
-Recommended UI style:
+Use:
 
-- compact pill flags;
-- simple borders;
-- readable text;
-- no giant modals;
-- no full-page overlays;
-- no color-only meaning;
-- no clutter around every post.
+- rounded cards;
+- soft shadows;
+- high contrast text;
+- green brand accents;
+- white icons on dark/green controls;
+- small pill buttons;
+- consistent spacing.
 
-The extension should feel like a careful annotation layer: visible enough to help, quiet enough that scrolling still feels normal.
+Avoid:
+
+- sharp clutter;
+- huge overlays;
+- pale blocks on dark feeds;
+- text walls;
+- fake charts;
+- placeholder-looking icons;
+- controls that collide with native platform UI.
