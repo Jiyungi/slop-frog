@@ -23,7 +23,7 @@ const config = {
     readInsForgeAnonKeyFromCli(),
   modalDetectorUrl: envValue(env, "SLOP_FROG_MODAL_DETECTOR_URL"),
   demoReviewerId: requiredEnv(env, "SLOP_FROG_DEMO_REVIEWER_ID"),
-  ownerReviewerId: envValue(env, "SLOP_FROG_OWNER_REVIEWER_ID") || envValue(env, "SLOP_FROG_DEMO_REVIEWER_ID"),
+  ownerReviewerId: envValue(env, "SLOP_FROG_OWNER_REVIEWER_ID"),
   publicQuota: Number(envValue(env, "SLOP_FROG_PUBLIC_QUOTA") || 15),
   allowDirectDetectorFallback:
     String(envValue(env, "SLOP_FROG_ALLOW_DIRECT_DETECTOR_FALLBACK") || "true").toLowerCase() !== "false",
