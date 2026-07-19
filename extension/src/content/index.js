@@ -131,6 +131,7 @@
   const LINKEDIN_COMMENT_SELECTORS = [
     ".comments-comment-item",
     ".comments-comment-entity",
+    ".comments-comment-list__comment-item",
     '[data-test-id="comments-comment-item"]',
     '[data-test-id*="comments-comment"]',
   ];
@@ -262,7 +263,16 @@
         .filter(Boolean),
       ...Array.from(
         root.querySelectorAll(
-          '.comments-comment-social-bar, .comments-comment-item__social-actions, button[aria-label*="Like"][aria-label*="comment"], button[aria-label*="Reply"]'
+          [
+            ".comments-comment-social-bar",
+            ".comments-comment-item__social-actions",
+            ".comments-comment-social-actions",
+            ".comments-comment-item__social-counts",
+            'button[aria-label*="Like"][aria-label*="comment" i]',
+            'button[aria-label*="Reply" i]',
+            '[aria-label*="Like"][aria-label*="comment" i]',
+            '[aria-label*="Reply" i]',
+          ].join(", ")
         )
       )
         .map((node) => closestLinkedInCommentContainer(node))
@@ -370,22 +380,119 @@
 
   function closestLinkedInCommentContainer(node) {
     const comment = node?.closest?.(LINKEDIN_COMMENT_SELECTORS.join(", "));
-    if (!comment || comment === document.body || comment.tagName === "MAIN") return null;
-    return comment;
+    if (comment && comment !== document.body && comment.tagName !== "MAIN" && !isLinkedInComposer(comment)) {
+      return comment;
+    }
+
+    return closestLinkedInCommentContainerByHeuristic(node);
   }
 
   function isLinkedInCommentContainer(node) {
-    return Boolean(node && closestLinkedInCommentContainer(node) === node);
+    return Boolean(
+      node &&
+        (node.matches?.(LINKEDIN_COMMENT_SELECTORS.join(", ")) ||
+          node.dataset?.slopFrogLinkedinComment === "true")
+    );
   }
 
   function findLinkedInCommentActionRow(comment) {
     return (
       comment.querySelector(".comments-comment-social-bar") ||
       comment.querySelector(".comments-comment-item__social-actions") ||
+      comment.querySelector(".comments-comment-social-actions") ||
       comment.querySelector(".comments-comment-item__social-counts") ||
       comment.querySelector('button[aria-label*="Like"]')?.closest('[role="group"], .social-actions, div') ||
       comment.querySelector('button[aria-label*="Reply"]')?.closest('[role="group"], .social-actions, div') ||
       comment
+    );
+  }
+
+  function closestLinkedInCommentContainerByHeuristic(node) {
+    let current = node?.closest?.("div, article, li");
+    for (let depth = 0; current && depth < 8; depth += 1) {
+      if (current === document.body || current.tagName === "MAIN") return null;
+      if (
+        isLinkedInComposer(current) ||
+        isLinkedInFeedContainer(current) ||
+        isLinkedInCommentActionRow(current)
+      ) {
+        current = current.parentElement?.closest("div, article, li") || null;
+        continue;
+      }
+
+      const text = cleanLinkedInText(current.innerText || current.textContent || "");
+      const hasCommentAction = Boolean(
+        current.querySelector(
+          [
+            ".comments-comment-social-bar",
+            ".comments-comment-item__social-actions",
+            ".comments-comment-social-actions",
+            'button[aria-label*="Like"][aria-label*="comment" i]',
+            'button[aria-label*="Reply" i]',
+            '[aria-label*="Like"][aria-label*="comment" i]',
+            '[aria-label*="Reply" i]',
+          ].join(", ")
+        )
+      );
+      const hasCommentMeta = Boolean(
+        current.querySelector(
+          [
+            ".comments-post-meta",
+            ".comments-comment-meta",
+            ".comments-comment-item__post-meta",
+            ".comments-comment-item__main-content",
+            ".comments-comment-item-content-body",
+            ".comments-comment-entity__content",
+          ].join(", ")
+        )
+      );
+
+      if (text.length > 8 && (hasCommentAction || hasCommentMeta)) {
+        current.dataset.slopFrogLinkedinComment = "true";
+        return current;
+      }
+      current = current.parentElement?.closest("div, article, li") || null;
+    }
+    return null;
+  }
+
+  function isLinkedInComposer(node) {
+    const text = String(node?.innerText || node?.textContent || "");
+    return /Add a comment|Comment as|Start a comment/i.test(text);
+  }
+
+  function isLinkedInFeedContainer(node) {
+    return Boolean(
+      node?.matches?.(
+        [
+          ".feed-shared-update-v2",
+          ".occludable-update",
+          ".fie-impression-container",
+          '[data-view-name="feed-full-update"]',
+          '[data-urn*="urn:li:activity"]',
+          '[data-id*="urn:li:activity"]',
+          "[data-activity-urn]",
+        ].join(", ")
+      )
+    );
+  }
+
+  function isLinkedInCommentActionRow(node) {
+    if (!node) return false;
+    const text = cleanLinkedInText(node.innerText || node.textContent || "");
+    const hasOnlyActionText = /^(Like|Reply|Like\s+Reply|Reply\s+Like)$/i.test(text.replace(/\s+/g, " "));
+    return Boolean(
+      hasOnlyActionText ||
+        node.matches?.(
+          [
+            ".comments-comment-social-bar",
+            ".comments-comment-item__social-actions",
+            ".comments-comment-social-actions",
+            ".comments-comment-item__social-counts",
+            ".comment-actions",
+            '[role="group"]',
+          ].join(", ")
+        )
     );
   }
 

@@ -208,16 +208,16 @@ try {
     `JSON.stringify({
       oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
       newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
-      comments: document.querySelectorAll('.comments-comment-item').length,
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length
+      comments: document.querySelectorAll('.comments-comment-item, .comment-thread-node').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length
     })`,
     (state) =>
       state.oldCards === 3 &&
       state.newCards === 1 &&
-      state.comments === 2 &&
-      state.controls === 6 &&
-      state.commentControls === 2,
+      state.comments === 3 &&
+      state.controls === 7 &&
+      state.commentControls === 3,
     "LinkedIn feed posts and comments with controls across old and current DOM shapes"
   );
 
