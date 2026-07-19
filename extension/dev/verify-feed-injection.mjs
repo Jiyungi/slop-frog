@@ -233,9 +233,9 @@ try {
     (state) =>
       state.oldCards === 3 &&
       state.newCards === 1 &&
-      state.rawComments === 4 &&
-      state.controls === 8 &&
-      state.commentControls === 4 &&
+      state.rawComments === 5 &&
+      state.controls === 9 &&
+      state.commentControls === 5 &&
       state.duplicateSlots === 0 &&
       state.overlap === false,
     "LinkedIn feed posts and comments with one non-overlapping control set per content item"
@@ -263,8 +263,8 @@ try {
     })`,
     (state) =>
       state.firstKey === `linkedin:${timestamp}99` &&
-      state.controls === 8 &&
-      state.commentControls === 4 &&
+      state.controls === 9 &&
+      state.commentControls === 5 &&
       state.duplicateSlots === 0,
     "recycled LinkedIn feed cards update their Slop Frog owner without duplicates"
   );
@@ -284,7 +284,7 @@ try {
         return keys.length - new Set(keys).size;
       })()
     })`,
-    (state) => state.controls === 9 && state.commentControls === 5 && state.duplicateSlots === 0,
+    (state) => state.controls === 10 && state.commentControls === 6 && state.duplicateSlots === 0,
     "dynamically loaded LinkedIn comments receive one control set"
   );
 

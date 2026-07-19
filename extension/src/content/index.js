@@ -395,12 +395,12 @@
         .filter((node) => !isLinkedInCommentContainer(node))
     ).filter((post) => {
       const text = getLinkedInText(post);
-      return text.length > 8 || imageUrlsFrom(post).length > 0;
+      return text.length > 2 || imageUrlsFrom(post).length > 0;
     });
 
     const commentPosts = uniqueNodes(comments).filter((comment) => {
       const text = getLinkedInText(comment);
-      return text.length > 8 || imageUrlsFrom(comment).length > 0;
+      return text.length > 2 || imageUrlsFrom(comment).length > 0;
     });
 
     return [...feedPosts, ...commentPosts];
@@ -519,7 +519,7 @@
         )
       );
 
-      if (text.length > 8 && (hasCommentAction || hasCommentMeta)) {
+      if (text.length > 2 && (hasCommentAction || hasCommentMeta)) {
         current.dataset.slopFrogLinkedinComment = "true";
         return current;
       }
