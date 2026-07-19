@@ -208,14 +208,18 @@ try {
     `JSON.stringify({
       oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
       newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
-      rawComments: document.querySelectorAll('.comments-comment-item, [class*="comments-comment-item"], .comment-thread-node').length,
+      rawComments: document.querySelectorAll('.comments-comment-item, .comments-comment-item-v2, .comment-thread-node').length,
+      rightRailControls: document.querySelectorAll('aside .slop-frog-controls, .scaffold-layout__aside .slop-frog-controls, footer .slop-frog-controls').length,
       staleSlots: document.querySelectorAll('.slop-frog-slot[data-content-key="linkedin:stale-from-old-extension"]').length,
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comments-comment-item-v2 .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comments-comment-item-v2 .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
         const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
         return keys.length - new Set(keys).size;
       })(),
+      duplicateCommentRows: Array.from(document.querySelectorAll('.comments-comment-item, .comments-comment-item-v2, .comment-thread-node')).filter((comment) =>
+        comment.querySelectorAll(':scope > .slop-frog-slot.is-linkedin-comment').length > 1
+      ).length,
       overlap: (() => {
         const controls = Array.from(document.querySelectorAll('.slop-frog-controls'));
         const nativeButtons = Array.from(document.querySelectorAll('button, [role="button"]')).filter((button) =>
@@ -235,10 +239,12 @@ try {
       state.oldCards === 3 &&
       state.newCards === 1 &&
       state.rawComments >= 6 &&
+      state.rightRailControls === 0 &&
       state.staleSlots === 0 &&
       state.controls === 10 &&
       state.commentControls === 6 &&
       state.duplicateSlots === 0 &&
+      state.duplicateCommentRows === 0 &&
       state.overlap === false,
     "LinkedIn feed posts and comments with one non-overlapping control set per content item"
   );
@@ -285,8 +291,8 @@ try {
     linkedInPage,
     `JSON.stringify({
       firstKey: document.querySelector('.feed-shared-update-v2 > .slop-frog-slot')?.dataset.contentKey || '',
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comments-comment-item-v2 .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comments-comment-item-v2 .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
         const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
         return keys.length - new Set(keys).size;
@@ -308,8 +314,8 @@ try {
   const dynamicLinkedInState = await waitForState(
     linkedInPage,
     `JSON.stringify({
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comments-comment-item-v2 .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comments-comment-item-v2 .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
         const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
         return keys.length - new Set(keys).size;

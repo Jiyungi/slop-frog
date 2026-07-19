@@ -194,7 +194,6 @@
     ".comments-replies-list__reply-item",
     ".comments-thread-entity",
     ".comment-thread-node",
-    '[class*="comments-comment-item"]',
     '[data-test-id="comments-comment-item"]',
     '[data-test-id*="comments-comment"]',
     '[data-test-id*="comments-reply"]',
@@ -357,7 +356,8 @@
         .filter(Boolean),
     ])
       .map((node) => closestLinkedInCommentContainer(node))
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(isLinkedInScannableNode);
 
     const direct = Array.from(
       root.querySelectorAll(
@@ -372,8 +372,11 @@
           "[data-activity-urn]",
         ].join(", ")
       )
-    ).filter((node) => !closestLinkedInCommentContainer(node));
+    )
+      .filter(isLinkedInScannableNode)
+      .filter((node) => !closestLinkedInCommentContainer(node));
     const fromText = Array.from(root.querySelectorAll(LINKEDIN_TEXT_SELECTORS.join(", ")))
+      .filter(isLinkedInScannableNode)
       .map((node) =>
         closestLinkedInCommentContainer(node) || closestLinkedInPostContainer(node)
       )
@@ -388,6 +391,7 @@
         ].join(", ")
       )
     )
+      .filter(isLinkedInScannableNode)
       .map((node) => closestLinkedInPostContainer(node))
       .filter(Boolean);
     const fromActions = Array.from(
@@ -401,6 +405,7 @@
         ].join(", ")
       )
     )
+      .filter(isLinkedInScannableNode)
       .map((node) => closestLinkedInPostContainer(node))
       .filter(Boolean);
 
@@ -408,6 +413,7 @@
       [...direct, ...fromText, ...fromLinks, ...fromActions]
         .map((node) => closestLinkedInCommentContainer(node) || closestLinkedInPostContainer(node))
         .filter(Boolean)
+        .filter(isLinkedInScannableNode)
         .filter((node) => !isLinkedInCommentContainer(node))
     ).filter((post) => {
       const text = getLinkedInText(post);
@@ -415,6 +421,7 @@
     });
 
     const commentPosts = uniqueNodes(comments).filter((comment) => {
+      if (!isLinkedInScannableNode(comment)) return false;
       const text = getLinkedInText(comment);
       return text.length > 2 || imageUrlsFrom(comment).length > 0;
     });
@@ -424,6 +431,7 @@
 
   function closestLinkedInPostContainer(node) {
     if (!node) return null;
+    if (!isLinkedInScannableNode(node)) return null;
     const preferred = node.closest(
       [
         ".feed-shared-update-v2",
@@ -457,8 +465,15 @@
   }
 
   function closestLinkedInCommentContainer(node) {
+    if (!isLinkedInScannableNode(node)) return null;
     const comment = node?.closest?.(LINKEDIN_COMMENT_SELECTORS.join(", "));
-    if (comment && comment !== document.body && comment.tagName !== "MAIN" && !isLinkedInComposer(comment)) {
+    if (
+      comment &&
+      isLinkedInScannableNode(comment) &&
+      comment !== document.body &&
+      comment.tagName !== "MAIN" &&
+      !isLinkedInComposer(comment)
+    ) {
       return comment;
     }
 
@@ -571,6 +586,31 @@
         ].join(", ")
       )
     );
+  }
+
+  function isLinkedInScannableNode(node) {
+    if (!node?.closest) return false;
+    if (node.closest(".slop-frog-slot, .slop-frog-panel, .slop-frog-filter-card")) {
+      return false;
+    }
+    if (
+      node.closest(
+        [
+          "nav",
+          "footer",
+          "aside",
+          ".global-footer",
+          ".scaffold-layout__aside",
+          ".scaffold-layout__sidebar",
+          ".feed-shared-right-rail",
+          ".right-rail",
+          ".ad-banner-container",
+        ].join(", ")
+      )
+    ) {
+      return false;
+    }
+    return Boolean(node.closest("main, [role='main'], .scaffold-layout__main"));
   }
 
   function isLinkedInCommentActionRow(node) {
@@ -836,7 +876,7 @@
       panels: document.querySelectorAll(".slop-frog-panel").length,
       duplicateContentKeys: keys.length - new Set(keys).size,
       linkedInComments: document.querySelectorAll(
-        '.comments-comment-item, [class*="comments-comment-item"], .comments-reply-item, .comments-replies-list__reply-item, .comments-thread-entity, .comment-thread-node'
+        ".comments-comment-item, .comments-comments-list__comment-item, .comments-comment-item-v2, .comments-reply-item, .comments-replies-list__reply-item, .comments-thread-entity, .comment-thread-node"
       ).length,
       linkedInCommentControls: document.querySelectorAll(
         ".slop-frog-slot.is-linkedin-comment .slop-frog-controls"
