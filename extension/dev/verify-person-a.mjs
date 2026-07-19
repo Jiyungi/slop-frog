@@ -118,6 +118,11 @@ assert(
   "community score displays a clear vote count"
 );
 assert(
+  contentScript.includes("function renderSlopControls") &&
+    sliceFunction(contentScript, "updatePanelCommunity").includes("renderSlopControls"),
+  "community updates repaint the compact flag"
+);
+assert(
   contentScript.includes("createPanelCloseButton") &&
     contentScript.includes('close.textContent = "×"'),
   "panels include a close button"

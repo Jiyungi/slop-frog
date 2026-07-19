@@ -325,10 +325,16 @@
   function renderScored(article, response) {
     const payload = normalizePanelPayload(response, article);
     if (!payload) return;
+
+    payload.article = article;
+    panelState.set(article, payload);
+    renderSlopControls(article, payload);
+  }
+
+  function renderSlopControls(article, payload) {
     const result = payload.result;
     const mount = ensureMount(article);
 
-    panelState.set(article, payload);
     article.classList.toggle(
       "slop-frog-filtered",
       Boolean(result.autoFiltered) && article.dataset.slopFrogRevealed !== "true"
@@ -572,6 +578,9 @@
       communityAggregate,
       settings
     );
+    if (payload.article) {
+      renderSlopControls(payload.article, payload);
+    }
   }
 
   function chartBlock(title, points, mode) {
