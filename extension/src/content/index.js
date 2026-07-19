@@ -27,7 +27,12 @@
     if (stopped) return;
     scanVisiblePosts();
     observer = new MutationObserver(queueScan);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
     window.addEventListener("scroll", guardedEvent(queueScan), { passive: true });
     document.addEventListener("keydown", guardedEvent(closePanelsOnEscape));
     chrome.runtime.onMessage.addListener(handleRuntimeMessage);
@@ -46,16 +51,29 @@
 
   function scanVisiblePosts() {
     if (stopped || !activeAdapter) return;
+    cleanupContentKeyOwners();
     const articles = activeAdapter.findPosts(document);
 
     for (const article of articles) {
-      if (processedArticles.has(article)) continue;
       const envelope = extractPostEnvelope(article, activeAdapter);
+      const previousKey = processedArticles.get(article);
 
       if (!envelope) {
+        if (previousKey === "failed" && articleMounts.get(article)?.isConnected) continue;
+        if (previousKey && previousKey !== "failed") releaseContentKeyOwner(previousKey, article);
+        removeSlopUi(article);
         processedArticles.set(article, "failed");
         renderScored(article, makeLocalGrayResponse(article));
         continue;
+      }
+
+      if (previousKey === envelope.contentKey && articleMounts.get(article)?.isConnected) {
+        continue;
+      }
+
+      if (previousKey && previousKey !== envelope.contentKey) {
+        releaseContentKeyOwner(previousKey, article);
+        removeSlopUi(article);
       }
 
       const duplicateOwner = connectedOwnerForContentKey(envelope.contentKey);
@@ -70,12 +88,16 @@
       renderPending(article, envelope.contentKey);
 
       sendMessage({ type: "SLOP_FROG_SCORE_POST", post: envelope })
-        .then((response) => renderScored(article, response))
+        .then((response) => {
+          if (processedArticles.get(article) !== envelope.contentKey) return;
+          renderScored(article, response);
+        })
         .catch((error) => {
           if (isContextInvalidation(error?.message)) {
             stopContentScript();
             return;
           }
+          if (processedArticles.get(article) !== envelope.contentKey) return;
           renderScored(article, makeLocalGrayResponse(article, "extension_unavailable"));
         });
     }
@@ -628,6 +650,19 @@
       return null;
     }
     return owner;
+  }
+
+  function releaseContentKeyOwner(contentKey, article) {
+    const key = String(contentKey || "").replace(/^duplicate:/, "");
+    if (contentKeyOwners.get(key) === article) {
+      contentKeyOwners.delete(key);
+    }
+  }
+
+  function cleanupContentKeyOwners() {
+    for (const [contentKey, owner] of contentKeyOwners.entries()) {
+      if (!owner?.isConnected) contentKeyOwners.delete(contentKey);
+    }
   }
 
   function renderPending(article, contentKey = "") {

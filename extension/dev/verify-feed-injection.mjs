@@ -242,6 +242,34 @@ try {
   );
   await evaluate(
     linkedInPage,
+    `(() => {
+      const card = document.querySelector('.feed-shared-update-v2');
+      card.setAttribute('data-urn', 'urn:li:activity:${timestamp}99');
+      card.querySelector('a[href*="/feed/update/"]').href = 'https://www.linkedin.com/feed/update/urn:li:activity:${timestamp}99/';
+      card.querySelector('.update-components-text').textContent =
+        'LinkedIn virtualized this feed card into a brand new post after Slop Frog had already processed the old node, so controls must update without duplicating.';
+    })()`
+  );
+  const recycledLinkedInState = await waitForState(
+    linkedInPage,
+    `JSON.stringify({
+      firstKey: document.querySelector('.feed-shared-update-v2 > .slop-frog-slot')?.dataset.contentKey || '',
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      duplicateSlots: (() => {
+        const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
+        return keys.length - new Set(keys).size;
+      })()
+    })`,
+    (state) =>
+      state.firstKey === `linkedin:${timestamp}99` &&
+      state.controls === 8 &&
+      state.commentControls === 4 &&
+      state.duplicateSlots === 0,
+    "recycled LinkedIn feed cards update their Slop Frog owner without duplicates"
+  );
+  await evaluate(
+    linkedInPage,
     `document.querySelector('.feed-shared-update-v2').insertAdjacentHTML('beforeend',
       '<div class="comments-comment-item" data-test-id="comments-comment-item"><div class="comments-comment-text">This is a dynamically loaded LinkedIn comment after the post was already scanned, and it still needs its own Slop Frog controls.</div><div class="comments-comment-social-bar" role="group"><button aria-label="Like dynamic LinkedIn comment">Like</button><button aria-label="Reply to dynamic LinkedIn comment">Reply</button></div></div>'
     )`
@@ -276,6 +304,7 @@ try {
         stableControlCount,
       },
         linkedIn: linkedInState,
+        recycledLinkedIn: recycledLinkedInState,
         dynamicLinkedIn: dynamicLinkedInState,
       },
       null,
