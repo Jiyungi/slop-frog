@@ -234,8 +234,8 @@ try {
       state.oldCards === 3 &&
       state.newCards === 1 &&
       state.rawComments === 4 &&
-      state.controls === 7 &&
-      state.commentControls === 3 &&
+      state.controls === 8 &&
+      state.commentControls === 4 &&
       state.duplicateSlots === 0 &&
       state.overlap === false,
     "LinkedIn feed posts and comments with one non-overlapping control set per content item"
@@ -256,7 +256,7 @@ try {
         return keys.length - new Set(keys).size;
       })()
     })`,
-    (state) => state.controls === 8 && state.commentControls === 4 && state.duplicateSlots === 0,
+    (state) => state.controls === 9 && state.commentControls === 5 && state.duplicateSlots === 0,
     "dynamically loaded LinkedIn comments receive one control set"
   );
 

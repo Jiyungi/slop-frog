@@ -429,14 +429,9 @@
 
   function findLinkedInCommentInsertionPoint(comment) {
     return (
-      comment.querySelector(".comments-comment-item__inline-show-more-text") ||
-      comment.querySelector(".comments-comment-text") ||
-      comment.querySelector(".comments-comment-item-content-body") ||
-      comment.querySelector(".comments-comment-entity__content") ||
-      comment.querySelector(".comments-comment-item__main-content") ||
-      comment.querySelector(".update-components-text") ||
-      comment.querySelector(".break-words") ||
-      comment.querySelector('[dir="ltr"]') ||
+      firstLinkedInTextNode(comment, LINKEDIN_COMMENT_TEXT_SELECTORS, {
+        excludeNestedComments: true,
+      }) ||
       findLinkedInCommentActionRow(comment) ||
       comment
     );
@@ -534,7 +529,8 @@
   function getLinkedInText(post) {
     const selectedText = getTextFromSelectors(
       post,
-      isLinkedInCommentContainer(post) ? LINKEDIN_COMMENT_TEXT_SELECTORS : LINKEDIN_TEXT_SELECTORS
+      isLinkedInCommentContainer(post) ? LINKEDIN_COMMENT_TEXT_SELECTORS : LINKEDIN_TEXT_SELECTORS,
+      { excludeNestedComments: true }
     );
     if (selectedText.length > 0) return cleanLinkedInText(selectedText);
     return cleanLinkedInText(post.innerText || post.textContent || "");
@@ -555,10 +551,11 @@
       .join("\n");
   }
 
-  function getTextFromSelectors(root, selectors) {
+  function getTextFromSelectors(root, selectors, options = {}) {
     for (const selector of selectors) {
       const text = Array.from(root.querySelectorAll(selector))
-        .map((node) => node.innerText || node.textContent || "")
+        .filter((node) => !options.excludeNestedComments || !isNestedLinkedInCommentNode(root, node))
+        .map((node) => linkedInTextFromNode(root, node, options))
         .map((textValue) => textValue.trim())
         .filter(Boolean)
         .join("\n")
@@ -566,6 +563,33 @@
       if (text.length > 0) return text;
     }
     return "";
+  }
+
+  function firstLinkedInTextNode(root, selectors, options = {}) {
+    for (const selector of selectors) {
+      const node = Array.from(root.querySelectorAll(selector)).find(
+        (candidate) =>
+          (!options.excludeNestedComments || !isNestedLinkedInCommentNode(root, candidate)) &&
+          cleanLinkedInText(linkedInTextFromNode(root, candidate, options)).length > 0
+      );
+      if (node) return node;
+    }
+    return null;
+  }
+
+  function linkedInTextFromNode(root, node, options = {}) {
+    if (!options.excludeNestedComments) return node.innerText || node.textContent || "";
+    const clone = node.cloneNode(true);
+    clone
+      .querySelectorAll(LINKEDIN_COMMENT_SELECTORS.join(", "))
+      .forEach((nested) => nested.remove());
+    return clone.innerText || clone.textContent || "";
+  }
+
+  function isNestedLinkedInCommentNode(root, node) {
+    if (!root || !node || !root.contains(node)) return false;
+    const owningComment = node.closest?.(LINKEDIN_COMMENT_SELECTORS.join(", "));
+    return Boolean(owningComment && owningComment !== root);
   }
 
   function firstHref(root, selectors) {
