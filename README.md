@@ -1,9 +1,59 @@
 # Slop Frog
 
-Slop Frog is a local-first Chrome extension for X and LinkedIn. It extracts the
-visible feed posts in the browser, scores their text with the local Imbue
-Qwen detector on the Mac, and stores explicit community feedback and appeals
-in Supabase. X/Twitter and LinkedIn are the only supported sources in this MVP.
+Let’s be honest: social media is not stopping AI slop from flooding people’s
+feeds. It reaches children, parents, and grandparents before they even know what
+they are looking at. Slop Frog exists to give users a simple safety layer while
+they scroll.
+
+Slop Frog is a Chrome extension for X and LinkedIn that flags likely
+AI-generated content directly inside the feed. Instead of making users copy and
+paste posts into a detector, Slop Frog works automatically while they scroll and
+shows a simple red, yellow, green, or gray flag on each post.
+
+This project serves the AI safety themes of information integrity, user
+protection, transparency, and human oversight. AI-generated content is becoming
+cheap, persuasive, and extremely scalable, but most platforms do not clearly
+label it. That creates real risks: manipulation, spam, low-quality engagement
+farming, scams, political astroturfing, and children or older users being
+exposed to synthetic content without context.
+
+Slop Frog combines three signals:
+
+1. **AI detector score**  
+   We use Imbue’s newly released AI text detection model, based on Qwen, which
+   Imbue used for detecting AI-generated text in its Bouncer work.
+
+2. **Community judgment**  
+   Users can vote whether content looks AI-generated, human-written, or
+   uncertain.
+
+3. **Slop Score**  
+   Slop Frog combines the detector signal and community feedback into one simple
+   score, then displays a clear flag instead of overwhelming users with raw
+   probabilities.
+
+The product is intentionally contestable. We do not claim “this is definitely
+AI.” We show evidence, allow community correction, and support appeals when
+labels are wrong. This matters because AI detectors can make mistakes, and
+safety tools should not become unchallengeable accusation machines.
+
+A natural concern is: why store any data? Our answer is that Slop Frog only
+stores what is necessary to improve safety. We do not need to store everyone’s
+entire feed. The system stores explicit community votes, appeals, post
+identifiers, scores, and limited metadata. For future model improvement, labeled
+examples can be cleaned to remove PII before being used as training data. That
+means no raw personal identifiers, no private user profiles, and no unnecessary
+data retention.
+
+The long-term goal is a safer feedback loop: detector flags content, humans
+correct the detector, those corrections create better labeled data, and that
+data helps train better AI detectors over time.
+
+Slop Frog is necessary because the internet is entering a world where synthetic
+content is abundant, cheap, and hard to distinguish. Users deserve a lightweight
+layer that helps them understand what they are consuming, challenge bad labels,
+and reduce exposure to AI slop without giving platforms total control over the
+truth.
 
 ## Local setup
 
