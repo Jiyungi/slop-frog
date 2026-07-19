@@ -18,6 +18,8 @@ modal-imbue-inference
 
 Work should continue there until the demo path is stable, then merge to `main`.
 
+The long-term target is a Chrome Web Store extension. Public users should be able to install and use Slop Frog, but they must be severely rate-limited for live Modal inference. The owner/admin account is allowed to bypass public limits for demos and development.
+
 No task may be marked complete until its verification step has passed. "Code exists" is not enough.
 
 ## Solo ownership
@@ -32,9 +34,10 @@ This means there is no Person A / Person B split. The work is still staged in wa
 2. Stabilize Modal detector access.
 3. Wire Runtype as the product workflow layer.
 4. Migrate backend data paths to InsForge.
-5. Polish extension UI and platform support.
-6. Add learning-loop architecture and eval gates.
-7. Verify and package the demo.
+5. Add public rate limits and score cache.
+6. Polish extension UI and platform support.
+7. Add learning-loop architecture and eval gates.
+8. Verify and package the demo.
 
 ## Tasks
 
@@ -60,8 +63,9 @@ This means there is no Person A / Person B split. The work is still staged in wa
 
   - [ ] 2.3 Add Runtype and InsForge environment contract
     - Document required variables for Runtype product API, Modal detector URL, and InsForge backend.
+    - Document owner/admin identifier configuration.
     - Remove Supabase as the target backend from new setup docs.
-    - _Requirements: 4.8, 5.1-5.8, 6.1-6.7_
+    - _Requirements: 4.8, 5.1-5.8, 6.1-6.7, 6B.10-6B.12_
     - **Verification:** `.env.example` contains the current required variable names without secret values.
 
 - [ ] 3. Stabilize Modal detector
@@ -109,8 +113,9 @@ This means there is no Person A / Person B split. The work is still staged in wa
   - [ ] 4.4 Connect extension scoring to Runtype
     - Route extension scoring through the Runtype `score_post` endpoint as the stable product API.
     - Keep direct Modal calls available only as a debug fallback.
-    - _Requirements: 5.1-5.8_
-    - **Verification:** A live post score is produced through Runtype, not only direct Modal.
+    - Ensure public scoring goes through quota/cache before Modal.
+    - _Requirements: 5.1-5.8, 6B.3-6B.12_
+    - **Verification:** A live post score is produced through Runtype, not only direct Modal, and the response includes a rate-limit/cache decision.
 
   - [ ] 4.5 Connect feedback and appeal to Runtype
     - Route feedback and appeal submissions through Runtype or through InsForge functions called by Runtype.
@@ -124,9 +129,18 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** `npx @insforge/cli current --json` shows the linked `slop_frog` project.
 
   - [ ] 5.2 Create InsForge schema
-    - Add tables for content items, reviewers, community votes, appeals, verdict history, training candidates, dataset batches, model registry, and eval results.
-    - _Requirements: 6.2-6.7, 14.1-14.6, 15.1-15.7, 16.1-16.7_
+    - Add tables for content items, reviewers, community votes, appeals, verdict history, training candidates, dataset batches, model registry, eval results, score cache, rate-limit buckets, and rate-limit events.
+    - _Requirements: 6.2-6.10, 6A.1-6A.9, 6B.5-6B.12, 14.1-14.6, 15.1-15.7, 16.1-16.7_
     - **Verification:** InsForge SQL query confirms all required tables exist.
+
+  - [ ] 5.2.1 Create actual InsForge migration file
+    - Use `npx @insforge/cli db migrations new migrate_slop_frog_schema`.
+    - Port the useful Supabase schema into InsForge/Postgres migration SQL.
+    - Normalize `tweet_id` to `post_id`.
+    - Normalize `reputation_weight` to `quality_weight`.
+    - Keep `content_key` stable.
+    - _Requirements: 6A.1-6A.9_
+    - **Verification:** Migration applies with `npx @insforge/cli db migrations up --all`.
 
   - [ ] 5.3 Implement community aggregate query
     - Compute weighted community score from explicit votes and reviewer quality.
@@ -149,106 +163,131 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 10.7-10.10, 12.5_
     - **Verification:** A post with one score and one later vote has at least two verdict-history events.
 
-- [ ] 6. Stabilize X extension UI
-  - [x] 6.1 Keep auto-filter off by default
+- [ ] 6. Implement public rate limiting and score cache
+  - [ ] 6.1 Add score cache lookup
+    - Check `score_cache` before calling Modal.
+    - Reuse fresh detector scores by `content_key`.
+    - _Requirements: 6B.5-6B.6, 15.8-15.9_
+    - **Verification:** Scoring the same content twice results in one Modal call and one cache hit.
+
+  - [ ] 6.2 Add public quota buckets
+    - Create quota logic for public users.
+    - Default public quota: one new uncached live inference per rolling 24 hours per install/account.
+    - _Requirements: 6B.7-6B.9_
+    - **Verification:** A public test subject can score one uncached post live, then receives `rate_limited` fallback for the next uncached post.
+
+  - [ ] 6.3 Add owner/admin bypass
+    - Configure owner/admin identity server-side.
+    - Bypass public quota for owner/admin requests.
+    - _Requirements: 6B.10-6B.12, 17.12_
+    - **Verification:** Owner/admin test subject can score multiple uncached posts without rate-limit fallback.
+
+  - [ ] 6.4 Add graceful quota UI
+    - When quota is exhausted, show cached/community results if available.
+    - If no score is available, show gray with reason `rate_limited`.
+    - _Requirements: 6B.9, 18.6-18.7_
+    - **Verification:** Public quota exhaustion does not crash the extension or spam Modal.
+
+- [ ] 7. Stabilize X extension UI
+  - [x] 7.1 Keep auto-filter off by default
     - Existing user settings should migrate away from accidental default-on behavior.
     - _Requirements: 13.1_
     - **Verification:** Fresh install and existing install both show auto-filter disabled unless the user explicitly enables it.
 
-  - [x] 6.2 Remove stale auto-filter blockers when disabled
+  - [x] 7.2 Remove stale auto-filter blockers when disabled
     - If the user unchecks auto-filter, visible blockers should disappear.
     - _Requirements: 13.4_
     - **Verification:** A hidden red post reappears after auto-filter is turned off.
 
-  - [ ] 6.3 Finalize bottom-left/bottom-action placement
+  - [ ] 7.3 Finalize bottom-left/bottom-action placement
     - The compact controls should sit near the lower-left/bottom action area without pushing X buttons sideways.
     - _Requirements: 9.1-9.5_
     - **Verification:** Test at least five X post shapes: text-only, quote post, image post, video post, repost/reply, and confirm no collisions.
 
-  - [ ] 6.4 Replace ugly placeholder icons
+  - [ ] 7.4 Replace ugly placeholder icons
     - Use a real flag shape for evidence.
     - Use a clear white message/feedback icon.
     - Use a clear white justice/appeal icon.
     - _Requirements: 9.2-9.4_
     - **Verification:** Icons are legible on X dark mode and do not look like markdown drawings.
 
-  - [ ] 6.5 Finalize evidence panel behavior
+  - [ ] 7.5 Finalize evidence panel behavior
     - Evidence panel must close.
     - Opening evidence must not permanently block feedback or appeal actions.
     - Graphs must use real data or honest single-point/flat states.
     - _Requirements: 9.7-9.8, 10.1-10.10_
     - **Verification:** Open/close evidence, then open feedback and appeal on the same post.
 
-  - [ ] 6.6 Polish popup UI
+  - [ ] 7.6 Polish popup UI
     - Remove noisy developer fields from the default popup.
     - Keep detector/community status understandable.
     - Keep green brand identity while preserving contrast.
     - _Requirements: 9.6, 9.9-9.10_
     - **Verification:** Popup is readable, compact, and has no unnecessary explainer text.
 
-- [ ] 7. Stabilize LinkedIn support
-  - [ ] 7.1 Verify LinkedIn content script matching
+- [ ] 8. Stabilize LinkedIn support
+  - [ ] 8.1 Verify LinkedIn content script matching
     - Ensure manifest host permissions and content script matches include LinkedIn.
     - _Requirements: 1.3, 2.1_
     - **Verification:** Extension content script runs on LinkedIn feed pages.
 
-  - [ ] 7.2 Implement/repair LinkedIn adapter selectors
+  - [ ] 8.2 Implement/repair LinkedIn adapter selectors
     - Extract visible LinkedIn post text and metadata into the same `Post_Envelope` shape.
     - _Requirements: 2.3-2.5_
     - **Verification:** At least three LinkedIn feed posts produce valid envelopes.
 
-  - [ ] 7.3 Render LinkedIn compact controls
+  - [ ] 8.3 Render LinkedIn compact controls
     - Add controls without colliding with LinkedIn buttons.
     - _Requirements: 1.3, 9.1-9.5_
     - **Verification:** At least three LinkedIn posts show flags.
 
-- [ ] 8. Fix score-update correctness
-  - [ ] 8.1 Update flag color after community vote
+- [ ] 9. Fix score-update correctness
+  - [ ] 9.1 Update flag color after community vote
     - If voting changes Slop Score from green to yellow/red or vice versa, update the visible flag immediately.
     - _Requirements: 7.5, 11.5_
     - **Verification:** Fixture or live vote changes visible flag color without page refresh.
 
-  - [ ] 8.2 Fix community score formatting
+  - [ ] 9.2 Fix community score formatting
     - Remove stray `.0` or formatting artifacts.
     - _Requirements: 11.6_
     - **Verification:** Community score renders as a clean integer/label in evidence panel.
 
-  - [ ] 8.3 Make graphs honest
+  - [ ] 9.3 Make graphs honest
     - If only one verdict-history event exists, show a flat/single-point state.
     - If no real history exists, show unavailable instead of fake trend movement.
     - _Requirements: 10.7-10.10_
     - **Verification:** One-event fixture does not render fake rising graph.
 
-- [ ] 9. Implement privacy-safe learning-loop foundation
-  - [ ] 9.1 Store training candidates only from explicit labels
+- [ ] 10. Implement privacy-safe learning-loop foundation
+  - [ ] 10.1 Store training candidates only from explicit labels
     - Votes and appeals may create candidates.
     - Passive scrolling must not create training examples.
     - _Requirements: 15.1-15.7, 16.1-16.3_
     - **Verification:** Scoring a post without voting does not create a training candidate.
 
-  - [ ] 9.2 Add PII-cleaning metadata
+  - [ ] 10.2 Add PII-cleaning metadata
     - Track cleaning status and PII risk for each candidate.
     - _Requirements: 15.5-15.7, 16.3_
     - **Verification:** Candidate records include cleaning status before dataset batch membership.
 
-  - [ ] 9.3 Add dataset batch workflow placeholder
+  - [ ] 10.3 Add dataset batch workflow placeholder
     - Runtype `prepare_training_batch` should select cleaned candidates and create a batch record.
     - _Requirements: 16.1-16.4_
     - **Verification:** Running the workflow on fixtures produces a batch metadata record, not a full training job.
 
-  - [ ] 9.4 Add eval-gated promotion design
+  - [ ] 10.4 Add eval-gated promotion design
     - Runtype `evaluate_new_detector` should record eval results before model promotion.
     - _Requirements: 16.4-16.7_
     - **Verification:** A candidate model cannot be marked promoted unless eval status is passing and approval is recorded.
 
-- [ ] 10. Clean documentation for judges
-  - [x] 10.1 Update README project description
+- [ ] 11. Clean documentation for judges and public users
+  - [x] 11.1 Update README project description
     - Explain Slop Frog from the safety/user perspective.
     - Include detector, community feedback, Slop Score, contestability, and data minimization.
     - _Requirements: 17.1-17.10_
     - **Verification:** README contains the updated project description.
 
-  - [ ] 10.2 Update setup instructions
+  - [ ] 11.2 Update setup instructions
     - Explain Modal deployment/health check.
     - Explain Runtype product key vs admin key.
     - Explain InsForge backend setup.
@@ -256,34 +295,45 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 4.8, 5.1-5.8, 6.1-6.7, 17.1-17.10_
     - **Verification:** A fresh reader can reach Modal health and load the extension using docs only.
 
-  - [ ] 10.3 Add demo script
+  - [ ] 11.3 Add demo script
     - Create a short demo path for judges.
     - Include X, LinkedIn if stable, evidence, feedback, appeal, and auto-filter opt-in.
     - _Requirements: 17.2-17.10_
     - **Verification:** Demo can be completed once without editing code mid-demo.
 
-- [ ] 11. Final demo verification
-  - [ ] 11.1 Run extension syntax checks
+  - [ ] 11.4 Add Chrome Web Store readiness notes
+    - Document public rate limit, privacy posture, required permissions, and no local-model requirement for public users.
+    - _Requirements: 18.1-18.8_
+    - **Verification:** README or release notes explain how a normal person installs and what happens after quota is exhausted.
+
+- [ ] 12. Final demo verification
+  - [ ] 12.1 Run extension syntax checks
     - Run existing extension verification commands.
     - _Requirements: 1.1-1.6_
     - **Verification:** `node --check` and existing verification script pass.
 
-  - [ ] 11.2 Run Modal health and score checks
+  - [ ] 12.2 Run Modal health and score checks
     - Verify `/health` and `/score`.
     - _Requirements: 4.1-4.8_
     - **Verification:** Both endpoints return successful responses.
 
-  - [ ] 11.3 Run Runtype workflow checks
+  - [ ] 12.3 Run Runtype workflow checks
     - Verify score, feedback, and appeal endpoints.
     - _Requirements: 5.1-5.8_
     - **Verification:** All three endpoints return successful non-placeholder responses.
 
-  - [ ] 11.4 Run InsForge backend checks
+  - [ ] 12.4 Run InsForge backend checks
     - Verify schema, vote write, appeal write, aggregate read, and verdict-history read.
     - _Requirements: 6.1-6.7, 11.1-11.6, 12.1-12.5_
     - **Verification:** Backend rows exist and match expected fixture output.
 
-  - [ ] 11.5 Run live browser demo
+  - [ ] 12.5 Run public quota checks
+    - Test public rate-limited subject.
+    - Test owner/admin bypass.
+    - _Requirements: 6B.7-6B.12, 17.11-17.13_
+    - **Verification:** Public subject gets rate-limited after quota; owner/admin does not.
+
+  - [ ] 12.6 Run live browser demo
     - Load extension.
     - Open X.
     - Open LinkedIn if stable.
@@ -315,22 +365,27 @@ This means there is no Person A / Person B split. The work is still staged in wa
     },
     {
       "id": 3,
-      "name": "Extension polish and platform support",
-      "tasks": ["6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "7.1", "7.2", "7.3", "8.1", "8.2", "8.3"]
+      "name": "Public rate limiting and score cache",
+      "tasks": ["6.1", "6.2", "6.3", "6.4"]
     },
     {
       "id": 4,
-      "name": "Learning loop and documentation",
-      "tasks": ["9.1", "9.2", "9.3", "9.4", "10.1", "10.2", "10.3"]
+      "name": "Extension polish and platform support",
+      "tasks": ["7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.1", "8.2", "8.3", "9.1", "9.2", "9.3"]
     },
     {
       "id": 5,
+      "name": "Learning loop and documentation",
+      "tasks": ["10.1", "10.2", "10.3", "10.4", "11.1", "11.2", "11.3", "11.4"]
+    },
+    {
+      "id": 6,
       "name": "Final verification",
-      "tasks": ["11.1", "11.2", "11.3", "11.4", "11.5"]
+      "tasks": ["12.1", "12.2", "12.3", "12.4", "12.5", "12.6"]
     }
   ],
   "completion_rule": "A task is complete only when its verification step has passed.",
-  "merge_rule": "Merge modal-imbue-inference into main only after wave 5 passes."
+  "merge_rule": "Merge modal-imbue-inference into main only after wave 6 passes."
 }
 ```
 

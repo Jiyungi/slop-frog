@@ -14,6 +14,8 @@ For the new AGI Summit hackathon direction, Slop Frog is an autonomous feed inte
 
 The product serves the hackathon themes of AI-native products, autonomous workflows, AI infrastructure tools, and vertical AI applications for information integrity. The core safety belief is simple: social media feeds are already flooded with AI slop, but users do not get a lightweight way to understand, challenge, or reduce exposure to it.
 
+The end product is not just a developer-mode demo. Slop Frog should become a Chrome Web Store extension that normal people can install and use. Public users must be rate-limited so they do not create uncontrolled Modal inference cost. The owner/admin account may bypass those public limits for demos, testing, and product development.
+
 ## Non-negotiable product rules
 
 1. **No paste-in UX.** Slop Frog must work automatically while the user scrolls.
@@ -25,6 +27,7 @@ The product serves the hackathon themes of AI-native products, autonomous workfl
 7. **No raw media storage.** InsForge must not store raw images, audio, or video for the MVP.
 8. **No backend LinkedIn scraping.** LinkedIn content can be analyzed when visible in the user's browser, but the backend must not scrape LinkedIn.
 9. **No blind self-modifying model.** Future model improvement must be gated by cleaning, evals, and human approval before promotion.
+10. **No public direct Modal calls.** Public extension users must call a controlled Slop Frog API that enforces cache, quota, and abuse limits before Modal inference.
 
 ## Glossary
 
@@ -47,6 +50,9 @@ The product serves the hackathon themes of AI-native products, autonomous workfl
 - **Runtype_Product:** The Slop Frog Runtype product/surface exposing scoring and workflow APIs.
 - **Modal_Detector:** Hosted Imbue/Qwen detector endpoint on Modal.
 - **InsForge_Backend:** Postgres-backed app backend replacing Supabase.
+- **Public_User:** A normal Chrome Web Store user who is not the owner/admin.
+- **Owner_User:** The project owner/admin account that can bypass demo and development rate limits.
+- **Rate_Limit_Decision:** Backend decision saying whether a request can use live Modal inference, cached score only, community-only score, or gray fallback.
 
 ## Requirements
 
@@ -131,6 +137,44 @@ The product serves the hackathon themes of AI-native products, autonomous workfl
 5. THE backend SHALL support edge functions or API endpoints for feedback submission, appeal submission, aggregate lookup, and verdict-history lookup.
 6. THE backend SHALL keep service keys server-side only.
 7. THE extension SHALL use only publishable/app-safe configuration.
+8. THE backend SHALL migrate the old Supabase-style schema into InsForge-owned migrations.
+9. THE backend SHALL provide compatibility mapping from old Supabase table names and columns to the new InsForge schema where practical.
+10. THE backend SHALL preserve the core entities: content items, reviewers, community votes, appeals, verdict history, and community aggregates.
+
+### Requirement 6A: Supabase to InsForge migration
+
+**User Story:** As the builder, I want a clear migration from Supabase to InsForge, so that the existing data model is not lost or duplicated in a messy way.
+
+#### Acceptance Criteria
+
+1. THE project SHALL keep the old Supabase schema as a reference only until migration is complete.
+2. THE project SHALL create InsForge migration SQL that recreates the needed tables in InsForge/Postgres.
+3. THE migration SHALL rename or normalize fields where useful, for example `reputation_weight` to `quality_weight`.
+4. THE migration SHALL keep `content_key` as the stable cross-system identifier.
+5. THE migration SHALL add rate-limit and score-cache tables required for public usage.
+6. THE migration SHALL add training-candidate and dataset-batch tables for the future learning loop.
+7. THE migration SHALL not copy secrets or service keys from Supabase.
+8. IF existing Supabase data is imported later, THEN it SHALL be exported as CSV/SQL, cleaned if needed, and imported into matching InsForge tables.
+9. THE migration SHALL be verified with InsForge SQL queries, not just by reading the file.
+
+### Requirement 6B: Public Chrome Web Store product and rate limiting
+
+**User Story:** As the product owner, I want normal users to install Slop Frog from the Chrome Web Store without letting them burn unlimited Modal inference, so that the product can be public without becoming financially unsafe.
+
+#### Acceptance Criteria
+
+1. THE end product SHALL support Chrome Web Store distribution.
+2. THE public extension SHALL not require users to run a local model.
+3. THE public extension SHALL not call Modal directly.
+4. THE public extension SHALL call a Slop Frog controlled API through Runtype/InsForge.
+5. THE controlled API SHALL check score cache before requesting live Modal inference.
+6. IF a content item already has a fresh cached detector score, THEN the system SHALL reuse it without calling Modal.
+7. Public anonymous users SHALL be severely rate-limited for live Modal inference.
+8. The default public quota SHALL be one new uncached live inference per rolling 24-hour window per install or account until a different business model exists.
+9. After quota is exhausted, THE system SHALL still show cached scores, community scores, and gray states where appropriate.
+10. Owner/admin users SHALL be able to bypass public rate limits.
+11. Rate-limit bypass SHALL be enforced server-side, not only in the extension UI.
+12. Rate-limit decisions SHALL be stored for observability and abuse debugging.
 
 ### Requirement 7: Slop Score and flag thresholds
 
@@ -261,6 +305,8 @@ The product serves the hackathon themes of AI-native products, autonomous workfl
 5. THE future training dataset SHALL remove PII before use.
 6. THE future training dataset SHALL not include private profile data or unnecessary author identifiers.
 7. THE backend SHALL track cleaning status before any labeled example is used for training.
+8. THE public extension SHALL avoid sending every post for live inference once quota is exhausted.
+9. THE system SHALL prefer cached post scores and community aggregates over repeated detector calls.
 
 ### Requirement 16: Learning loop and model improvement
 
@@ -292,6 +338,24 @@ The product serves the hackathon themes of AI-native products, autonomous workfl
 8. THE demo SHALL show one appeal submission path.
 9. THE demo SHALL show auto-filter off by default and opt-in red-post hiding.
 10. THE demo SHALL not depend on Cotal.
+11. THE demo SHALL show that public users are rate-limited.
+12. THE demo SHALL show that owner/admin mode is not rate-limited.
+13. THE demo SHALL explain that Chrome Web Store users get safe limited inference, cached results, and community labels rather than unlimited Modal usage.
+
+### Requirement 18: Chrome Web Store readiness
+
+**User Story:** As a non-technical user, I want to install Slop Frog like any other Chrome extension, so that I can filter my feed without running developer tools.
+
+#### Acceptance Criteria
+
+1. THE production extension SHALL be packaged for Chrome Web Store submission.
+2. THE production extension SHALL include a clear privacy disclosure.
+3. THE production extension SHALL request only necessary host permissions.
+4. THE production extension SHALL provide an onboarding state that explains the meaning of red, yellow, green, and gray in very few words.
+5. THE production extension SHALL work without exposing developer URLs in the default popup.
+6. THE production extension SHALL handle exhausted quota gracefully.
+7. THE production extension SHALL explain that rate limits exist to keep the detector available and affordable.
+8. THE owner/admin experience MAY expose diagnostic controls hidden from public users.
 
 ## Out of Scope for Current Hackathon Demo
 
@@ -304,3 +368,6 @@ The product serves the hackathon themes of AI-native products, autonomous workfl
 7. Facebook, Reddit, TikTok, Instagram, and YouTube support.
 8. Production-scale privacy review.
 9. Guaranteed detection of AI-edited images or videos.
+10. Full paid subscription system.
+11. Unlimited free hosted inference for public users.
+12. Production Chrome Web Store approval itself, unless time allows submission packaging.

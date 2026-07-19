@@ -208,6 +208,7 @@ It should show:
 - Slop Frog branding with green identity;
 - detector/workflow status;
 - community/backend status;
+- quota status for public users;
 - show numeric Slop Score toggle;
 - auto-filter red posts toggle.
 
@@ -219,6 +220,31 @@ It should not show by default:
 - unnecessary explanatory copy.
 
 Advanced/debug information can be hidden behind a small secondary action later.
+
+## Public quota states
+
+Public Chrome Web Store users are rate-limited. The UI should make this understandable without making the product feel broken.
+
+Use short language:
+
+```text
+Live checks left: 1
+```
+
+or:
+
+```text
+Live checks used
+Cached flags still work
+```
+
+Rules:
+
+- do not mention Modal cost in the main UI;
+- do not make quota warnings huge;
+- if quota is exhausted, uncached posts can show gray with reason `rate_limited`;
+- cached and community-backed posts should still render normal flags;
+- owner/admin mode may show a small `Admin` or `Demo` indicator in debug builds only.
 
 ## Visual direction
 
