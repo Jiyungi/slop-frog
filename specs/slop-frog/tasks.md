@@ -75,11 +75,12 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 4.1-4.5_
     - **Verification:** `curl.exe <MODAL_URL>/health` returns a successful health response.
 
-  - [ ] 3.2 Configure Modal URL everywhere it is needed
+  - [x] 3.2 Configure Modal URL everywhere it is needed
     - Set local env/config for `SLOP_FROG_MODAL_DETECTOR_URL`.
     - Set Runtype/InsForge secret or workflow variable for the Modal detector URL.
     - _Requirements: 4.6-4.8, 5.2_
     - **Verification:** Runtype `score_post` returns a detector-backed response instead of gray placeholder output.
+    - **Status:** Verified with strict `SLOP_FROG_VERIFY_RUNTYPE=1 node extension/dev/verify-product-api.mjs`; response includes Imbue/Qwen model identity and detector score.
 
   - [x] 3.3 Confirm model identity
     - Confirm the running detector is using the intended Imbue/Qwen text detector path or compatible artifact.
@@ -110,17 +111,19 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 5.6, 16.4_
     - **Verification:** Runtype API lists the eval suites.
 
-  - [ ] 4.4 Connect extension scoring to Runtype
+  - [x] 4.4 Connect extension scoring to Runtype
     - Route extension scoring through the Runtype `score_post` endpoint as the stable product API.
     - Keep direct Modal calls available only as a debug fallback.
     - Ensure public scoring goes through quota/cache before Modal.
     - _Requirements: 5.1-5.8, 6B.3-6B.12_
     - **Verification:** A live post score is produced through Runtype, not only direct Modal, and the response includes a rate-limit/cache decision.
+    - **Status:** Verified by strict Runtype product API scoring plus browser fixture checks. The extension now checks InsForge quota/cache before live Runtype scoring and writes detector results back to cache/history.
 
   - [ ] 4.5 Connect feedback and appeal to Runtype
     - Route feedback and appeal submissions through Runtype or through InsForge functions called by Runtype.
     - _Requirements: 5.3-5.4, 11.1-11.6, 12.1-12.5_
     - **Verification:** A live feedback submission and appeal submission reach the backend through the intended workflow path.
+    - **Status:** Not complete. Direct Runtype endpoint checks currently return placeholder bodies (`feedback_record: null`, `appeal_record: null`), so the extension continues to use the verified InsForge direct path for feedback and appeals.
 
 - [ ] 5. Migrate backend from Supabase to InsForge
   - [x] 5.1 Link InsForge project
@@ -330,6 +333,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - Verify score, feedback, and appeal endpoints.
     - _Requirements: 5.1-5.8_
     - **Verification:** All three endpoints return successful non-placeholder responses.
+    - **Status:** Partially verified. `score_post` returns a real detector-backed response; `submit_feedback` and `submit_appeal` still return placeholder records and are not marked complete.
 
   - [x] 12.4 Run InsForge backend checks
     - Verify schema, vote write, appeal write, aggregate read, and verdict-history read.

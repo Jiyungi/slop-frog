@@ -331,6 +331,21 @@ async function verifyCommunityActions(sessionId) {
 }
 
 async function verifyOfflineFallback(sessionId) {
+  const [configOverride] = await sendExtensionMessages(sessionId, [
+    {
+      type: "SLOP_FROG_TEST_SET_PRODUCT_CONFIG",
+      config: {
+        testOnly: true,
+        runtypeScorePostUrl: "",
+        insforgeUrl: "",
+        insforgeAnonKey: "",
+        modalDetectorUrl: "http://127.0.0.1:9",
+        allowDirectDetectorFallback: true,
+        demoReviewerId: "offline-verifier",
+      },
+    },
+  ]);
+  assert(configOverride?.ok, `Offline verifier could not override product config: ${configOverride?.error || "unknown error"}.`);
   const fixture = JSON.parse(
     readFileSync(path.join(repositoryRoot, "extension/src/shared/fixtures.json"), "utf8")
   ).find((entry) => entry.name === "medium-yellow");

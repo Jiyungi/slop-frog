@@ -250,7 +250,7 @@ function normalizeScoreEnvelope(body, post) {
       contentKey: direct?.contentKey || post?.contentKey,
       detectorScore,
       evidenceCoverage: Number(direct?.evidenceCoverage ?? direct?.evidence_coverage ?? 0),
-      labelRecommendation: direct?.labelRecommendation || direct?.label || result?.label || "gray",
+      labelRecommendation: direct?.labelRecommendation || direct?.label || direct?.flag || result?.label || "gray",
       reasons: direct?.reasons || direct?.reasonCodes || [],
       modalityScores: direct?.modalityScores || direct?.modality_scores || {},
       modelName: direct?.modelName || direct?.model_name || "runtype-score-post",

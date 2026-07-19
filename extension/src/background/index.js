@@ -60,6 +60,8 @@ async function routeMessage(message) {
       return submitVote(message.payload);
     case "SLOP_FROG_SUBMIT_APPEAL":
       return submitPostAppeal(message.payload);
+    case "SLOP_FROG_TEST_SET_PRODUCT_CONFIG":
+      return setProductConfigForTest(message.config);
     default:
       return { ok: false, error: "unknown_message_type" };
   }
@@ -169,6 +171,18 @@ async function getProductApiConfig() {
     productApiConfigPromise = loadProductApiConfig();
   }
   return productApiConfigPromise;
+}
+
+async function setProductConfigForTest(config) {
+  if (!config || config.testOnly !== true) {
+    return { ok: false, error: "test_config_requires_testOnly_true" };
+  }
+  const storedConfig = { ...config };
+  delete storedConfig.testOnly;
+  await runtime.chromeSet({ [PRODUCT_API_CONFIG_STORAGE_KEY]: storedConfig });
+  productApiConfigPromise = null;
+  memoryCache.clear();
+  return { ok: true };
 }
 
 async function getEffectiveSettings() {
@@ -313,8 +327,68 @@ async function scorePostThroughProductPath(post, settings, config, subjectKey) {
   };
 
   const communityPromise = fetchCommunityAggregateForPost(post);
-  const historyPromise = fetchHistoryForPost(post);
+  let plan = null;
 
+  if (isInsForgeConfigured(config)) {
+    plan = await resolveScorePlan(config, {
+      contentKey: post.contentKey,
+      platform: post.platform,
+      subjectKey,
+      tier: settings.userTier,
+      publicQuota: settings.publicQuota,
+    }).catch(() => null);
+
+    if (plan?.decision === "cache_hit") {
+      const cachedResponse = makeCachedScoreResponse(post, plan);
+      return {
+        detectorResponse: cachedResponse,
+        communityAggregate: await communityPromise,
+        ...(await historyPayloadForPost(post)),
+      };
+    }
+
+    if (plan?.decision === "rate_limited") {
+      const rateLimited = runtime.makeGrayScoreResponse("rate_limited", "slop-frog-quota");
+      rateLimited.contentKey = post.contentKey;
+      rateLimited.rateLimitDecision = "rate_limited";
+      return {
+        detectorResponse: rateLimited,
+        communityAggregate: await communityPromise,
+        ...(await historyPayloadForPost(post)),
+      };
+    }
+  }
+
+  if (!config.runtypeScorePostUrl && config.allowDirectDetectorFallback === false) {
+    const noApi = runtime.makeGrayScoreResponse("product_api_unavailable", "slop-frog-product-api");
+    noApi.contentKey = post.contentKey;
+    return { ...base, detectorResponse: noApi };
+  }
+
+  const detectorResponse = await callPreferredDetector(post, settings, config, subjectKey);
+  if (plan?.decision) detectorResponse.rateLimitDecision = plan.decision;
+
+  if (isInsForgeConfigured(config) && detectorResponse?.ok) {
+    await recordScoreCache(config, {
+      contentKey: post.contentKey,
+      platform: post.platform,
+      detectorScore: detectorResponse.detectorScore,
+      evidenceCoverage: detectorResponse.evidenceCoverage,
+      label: detectorResponse.labelRecommendation,
+      modelName: detectorResponse.modelName,
+      modelVersion: detectorResponse.modelVersion,
+      reasons: detectorResponse.reasons,
+    }).catch(() => null);
+  }
+
+  return {
+    detectorResponse,
+    communityAggregate: await communityPromise,
+    ...(await historyPayloadForPost(post)),
+  };
+}
+
+async function callPreferredDetector(post, settings, config, subjectKey) {
   if (isProductApiConfigured(config) && config.runtypeScorePostUrl) {
     try {
       const scored = await scorePostViaRuntype(config, {
@@ -332,74 +406,26 @@ async function scorePostThroughProductPath(post, settings, config, subjectKey) {
         tier: settings.userTier,
         publicQuota: settings.publicQuota,
       });
-      return {
-        detectorResponse: scored.scoreResponse,
-        communityAggregate: scored.communityAggregate || (await communityPromise),
-        scoreHistory: await historyPromise,
-        volumeHistory: volumeFromHistory(await historyPromise),
-      };
+      return scored.scoreResponse;
     } catch {
-      // Fall through to the direct controlled path for local demo resilience.
+      // Fall through to the direct Modal/local debug path for demo resilience.
     }
   }
 
-  if (isInsForgeConfigured(config)) {
-    const plan = await resolveScorePlan(config, {
-      contentKey: post.contentKey,
-      platform: post.platform,
-      subjectKey,
-      tier: settings.userTier,
-      publicQuota: settings.publicQuota,
-    }).catch(() => null);
-
-    if (plan?.decision === "cache_hit") {
-      const cachedResponse = makeCachedScoreResponse(post, plan);
-      return {
-        detectorResponse: cachedResponse,
-        communityAggregate: await communityPromise,
-        scoreHistory: await historyPromise,
-        volumeHistory: volumeFromHistory(await historyPromise),
-      };
-    }
-
-    if (plan?.decision === "rate_limited") {
-      const rateLimited = runtime.makeGrayScoreResponse("rate_limited", "slop-frog-quota");
-      rateLimited.contentKey = post.contentKey;
-      rateLimited.rateLimitDecision = "rate_limited";
-      return {
-        detectorResponse: rateLimited,
-        communityAggregate: await communityPromise,
-        scoreHistory: await historyPromise,
-        volumeHistory: volumeFromHistory(await historyPromise),
-      };
-    }
-  }
-
-  if (config.allowDirectDetectorFallback === false && !config.runtypeScorePostUrl) {
+  if (config.allowDirectDetectorFallback === false) {
     const noApi = runtime.makeGrayScoreResponse("product_api_unavailable", "slop-frog-product-api");
     noApi.contentKey = post.contentKey;
-    return { ...base, detectorResponse: noApi };
+    return noApi;
   }
 
-  const detectorResponse = await callDetector(post, settings, resolveDetectorUrl(settings, config));
-  if (isInsForgeConfigured(config) && detectorResponse?.ok) {
-    await recordScoreCache(config, {
-      contentKey: post.contentKey,
-      platform: post.platform,
-      detectorScore: detectorResponse.detectorScore,
-      evidenceCoverage: detectorResponse.evidenceCoverage,
-      label: detectorResponse.labelRecommendation,
-      modelName: detectorResponse.modelName,
-      modelVersion: detectorResponse.modelVersion,
-      reasons: detectorResponse.reasons,
-    }).catch(() => null);
-  }
+  return callDetector(post, settings, resolveDetectorUrl(settings, config));
+}
 
+async function historyPayloadForPost(post) {
+  const scoreHistory = await fetchHistoryForPost(post);
   return {
-    detectorResponse,
-    communityAggregate: await communityPromise,
-    scoreHistory: await historyPromise,
-    volumeHistory: volumeFromHistory(await historyPromise),
+    scoreHistory,
+    volumeHistory: volumeFromHistory(scoreHistory),
   };
 }
 

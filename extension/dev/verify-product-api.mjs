@@ -32,6 +32,7 @@ if (config.runtypeScorePostUrl) {
   const post = {
     platform: "x",
     contentKey: `x:js-runtype-${stamp}`,
+    url: `https://x.com/slopfrog/status/${stamp}`,
     normalizedText:
       "This synthetic social media post uses generic polished language about revolutionary AI workflows and scalable autonomous agents. It is long enough to test the deployed detector response through Runtype.",
     visibleText:
@@ -41,6 +42,7 @@ if (config.runtypeScorePostUrl) {
     const runtypeScore = await scorePostViaRuntype(config, {
       post,
       platform: post.platform,
+      postUrl: post.url,
       contentHash: post.contentKey,
       postText: post.normalizedText,
       settings: { evidenceCoverageMinimum: 50, redThreshold: 75, yellowThreshold: 40 },
