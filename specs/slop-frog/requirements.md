@@ -190,8 +190,13 @@ The end product is not just a developer-mode demo. Slop Frog should become a Chr
    - yellow: Slop_Score from 40 through 74;
    - green: Slop_Score below 40;
    - gray: insufficient evidence or scoring failure.
-5. IF a user vote changes the Slop_Score across a threshold, THEN the visible flag color SHALL update immediately after the new score is returned.
-6. THE UI SHALL hide raw numeric scores by default unless the user enables numeric scores or opens evidence.
+5. THE LinkedIn MVP SHALL use platform-specific stricter labels:
+   - red: LinkedIn Slop_Score greater than or equal to 40;
+   - yellow/orange: LinkedIn Slop_Score from 21 through 39;
+   - green: LinkedIn Slop_Score less than or equal to 20;
+   - gray: insufficient evidence or scoring failure.
+6. IF a user vote changes the Slop_Score across a threshold, THEN the visible flag color SHALL update immediately after the new score is returned.
+7. THE UI SHALL hide raw numeric scores by default unless the user enables numeric scores or opens evidence.
 
 ### Requirement 8: Evidence coverage and gray state
 

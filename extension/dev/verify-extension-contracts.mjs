@@ -31,6 +31,10 @@ assert(runtime.labelForScore(76) === "red", "76 is red");
 assert(runtime.labelForScore(75) === "red", "75 is red boundary");
 assert(runtime.labelForScore(40) === "yellow", "40 is yellow boundary");
 assert(runtime.labelForScore(39) === "green", "39 is green");
+assert(runtime.labelForScore(20, undefined, "linkedin") === "green", "LinkedIn 20 is green boundary");
+assert(runtime.labelForScore(21, undefined, "linkedin") === "yellow", "LinkedIn 21 is orange/yellow boundary");
+assert(runtime.labelForScore(39, undefined, "linkedin") === "yellow", "LinkedIn 39 is orange/yellow");
+assert(runtime.labelForScore(40, undefined, "linkedin") === "red", "LinkedIn 40 is red boundary");
 
 const gray = runtime.composeSlopScore(
   runtime.makeGrayScoreResponse("not_enough_signal"),
@@ -54,6 +58,21 @@ const scored = runtime.composeSlopScore(
 );
 assert(scored.slopScore === 70, "Slop Score combines detector/community");
 assert(scored.label === "yellow", "combined score can soften detector label");
+
+const linkedInScored = runtime.composeSlopScore(
+  {
+    ok: true,
+    contentKey: "linkedin:fixture",
+    platform: "linkedin",
+    detectorScore: 39,
+    evidenceCoverage: 80,
+    labelRecommendation: "green",
+    reasons: ["fixture"],
+  },
+  null,
+  runtime.DEFAULT_EXTENSION_SETTINGS
+);
+assert(linkedInScored.label === "yellow", "LinkedIn Slop Score 39 uses orange/yellow band");
 
 const contentScript = fs.readFileSync(
   path.join(extensionRoot, "src/content/index.js"),

@@ -425,6 +425,15 @@ else:
   green if slopScore < 40
 ```
 
+LinkedIn MVP override:
+
+```text
+red if slopScore >= 40
+yellow/orange if 20 < slopScore < 40
+green if slopScore <= 20
+gray if insufficient signal
+```
+
 The visible flag must update when a feedback submission changes the Slop Score across a threshold.
 
 ## UI design

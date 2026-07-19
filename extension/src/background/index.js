@@ -557,7 +557,7 @@ function buildPanelResponse(
   volumeHistory = []
 ) {
   const result = runtime.composeSlopScore(
-    { ...scoreResponse, contentKey: post?.contentKey || "" },
+    { ...scoreResponse, contentKey: post?.contentKey || "", platform: post?.platform || "" },
     communityAggregate,
     settings
   );

@@ -3,6 +3,8 @@
   const DEFAULT_MODAL_DETECTOR_URL = "";
   const DEFAULT_RED_THRESHOLD = 75;
   const DEFAULT_YELLOW_THRESHOLD = 40;
+  const LINKEDIN_RED_THRESHOLD = 40;
+  const LINKEDIN_YELLOW_THRESHOLD = 21;
   const DEFAULT_EVIDENCE_COVERAGE_MINIMUM = 50;
   const SETTINGS_STORAGE_KEY = "slopFrog.settings";
   const CACHE_STORAGE_KEY = "slopFrog.scoreCache";
@@ -76,9 +78,14 @@
     return Math.max(0, Math.min(100, Math.round(Number(value))));
   }
 
-  function labelForScore(score, settings = DEFAULT_EXTENSION_SETTINGS) {
+  function labelForScore(score, settings = DEFAULT_EXTENSION_SETTINGS, platform = "") {
     const cleanScore = clampScore(score);
     if (cleanScore === null) return "gray";
+    if (platform === "linkedin") {
+      if (cleanScore >= LINKEDIN_RED_THRESHOLD) return "red";
+      if (cleanScore >= LINKEDIN_YELLOW_THRESHOLD) return "yellow";
+      return "green";
+    }
     if (cleanScore >= settings.redThreshold) return "red";
     if (cleanScore >= settings.yellowThreshold) return "yellow";
     return "green";
@@ -115,7 +122,8 @@
       communityScore === null
         ? detectorScore
         : clampScore(detectorScore * 0.75 + communityScore * 0.25);
-    const label = labelForScore(slopScore, mergedSettings);
+    const platform = scoreResponse?.platform || inferPlatformFromContentKey(scoreResponse?.contentKey);
+    const label = labelForScore(slopScore, mergedSettings, platform);
 
     return {
       contentKey: scoreResponse.contentKey || "",
@@ -128,6 +136,13 @@
       autoFiltered: label === "red" && Boolean(mergedSettings.autoFilterRed),
       rateLimitDecision: scoreResponse?.rateLimitDecision,
     };
+  }
+
+  function inferPlatformFromContentKey(contentKey) {
+    const key = String(contentKey || "");
+    if (key.startsWith("linkedin:")) return "linkedin";
+    if (key.startsWith("x:")) return "x";
+    return "";
   }
 
   function makeGrayScoreResponse(reason, modelName = "slop-frog-extension") {
@@ -203,6 +218,8 @@
     DEFAULT_EXTENSION_SETTINGS,
     DEFAULT_RED_THRESHOLD,
     DEFAULT_YELLOW_THRESHOLD,
+    LINKEDIN_RED_THRESHOLD,
+    LINKEDIN_YELLOW_THRESHOLD,
     DEFAULT_EVIDENCE_COVERAGE_MINIMUM,
     SETTINGS_STORAGE_KEY,
     CACHE_STORAGE_KEY,

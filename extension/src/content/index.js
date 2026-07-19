@@ -451,7 +451,11 @@
       if (!payload?.scoreResponse) continue;
       payload.settings = settings;
       payload.result = runtime.composeSlopScore(
-        { ...payload.scoreResponse, contentKey: payload.post?.contentKey || "" },
+        {
+          ...payload.scoreResponse,
+          contentKey: payload.post?.contentKey || "",
+          platform: payload.post?.platform || activeAdapter?.platform || "",
+        },
         payload.communityAggregate,
         settings
       );
@@ -671,7 +675,11 @@
     if (!communityAggregate) return;
     payload.communityAggregate = communityAggregate;
     payload.result = runtime.composeSlopScore(
-      { ...payload.scoreResponse, contentKey: payload.post?.contentKey || "" },
+      {
+        ...payload.scoreResponse,
+        contentKey: payload.post?.contentKey || "",
+        platform: payload.post?.platform || activeAdapter?.platform || "",
+      },
       communityAggregate,
       settings
     );
