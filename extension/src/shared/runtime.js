@@ -1,19 +1,26 @@
 (function initSlopFrogRuntime(globalScope) {
   const LOCAL_DETECTOR_URL = "http://localhost:8765";
+  const DEFAULT_SCORING_API_URL = "";
+  const DEFAULT_MODAL_DETECTOR_URL = "";
   const DEFAULT_RED_THRESHOLD = 75;
   const DEFAULT_YELLOW_THRESHOLD = 40;
   const DEFAULT_EVIDENCE_COVERAGE_MINIMUM = 50;
   const SETTINGS_STORAGE_KEY = "slopFrog.settings";
   const CACHE_STORAGE_KEY = "slopFrog.scoreCache";
+  const INSTALL_STORAGE_KEY = "slopFrog.installSubjectKey";
   const MAX_CACHE_ITEMS = 150;
 
   const DEFAULT_EXTENSION_SETTINGS = Object.freeze({
     evidenceCoverageMinimum: DEFAULT_EVIDENCE_COVERAGE_MINIMUM,
     redThreshold: DEFAULT_RED_THRESHOLD,
     yellowThreshold: DEFAULT_YELLOW_THRESHOLD,
+    scoringApiUrl: DEFAULT_SCORING_API_URL,
+    modalDetectorUrl: DEFAULT_MODAL_DETECTOR_URL,
     localDetectorUrl: LOCAL_DETECTOR_URL,
     showNumericScore: false,
     autoFilterRed: false,
+    publicQuota: 1,
+    userTier: "public_guest",
   });
 
   const LABEL_META = Object.freeze({
@@ -92,15 +99,20 @@
         label: "gray",
         slopScore: null,
         detectorScore: clampScore(scoreResponse?.detectorScore),
-        communityScore: clampScore(communityAggregate?.weightedAiScore),
+        communityScore: clampScore(
+          communityAggregate?.weightedAiScore ?? communityAggregate?.communityScore
+        ),
         evidenceCoverage,
         reasons: reasons.length ? reasons : ["not_enough_signal"],
-        autoFiltered: false,
+      autoFiltered: false,
+      rateLimitDecision: scoreResponse?.rateLimitDecision,
       };
     }
 
     const detectorScore = clampScore(scoreResponse.detectorScore);
-    const communityScore = clampScore(communityAggregate?.weightedAiScore);
+    const communityScore = clampScore(
+      communityAggregate?.weightedAiScore ?? communityAggregate?.communityScore
+    );
     const slopScore =
       communityScore === null
         ? detectorScore
@@ -116,6 +128,7 @@
       evidenceCoverage,
       reasons,
       autoFiltered: label === "red" && Boolean(mergedSettings.autoFilterRed),
+      rateLimitDecision: scoreResponse?.rateLimitDecision,
     };
   }
 
@@ -175,14 +188,28 @@
     return merged;
   }
 
+  async function getInstallSubjectKey() {
+    const stored = await chromeGet(INSTALL_STORAGE_KEY);
+    if (stored[INSTALL_STORAGE_KEY]) return stored[INSTALL_STORAGE_KEY];
+    const random =
+      globalScope.crypto?.randomUUID?.() ||
+      `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    const subjectKey = `install:${stableHash(random)}`;
+    await chromeSet({ [INSTALL_STORAGE_KEY]: subjectKey });
+    return subjectKey;
+  }
+
   globalScope.SlopFrogRuntime = Object.freeze({
     LOCAL_DETECTOR_URL,
+    DEFAULT_SCORING_API_URL,
+    DEFAULT_MODAL_DETECTOR_URL,
     DEFAULT_EXTENSION_SETTINGS,
     DEFAULT_RED_THRESHOLD,
     DEFAULT_YELLOW_THRESHOLD,
     DEFAULT_EVIDENCE_COVERAGE_MINIMUM,
     SETTINGS_STORAGE_KEY,
     CACHE_STORAGE_KEY,
+    INSTALL_STORAGE_KEY,
     MAX_CACHE_ITEMS,
     LABEL_META,
     CONTROL_META,
@@ -196,5 +223,6 @@
     chromeSet,
     getSettings,
     saveSettings,
+    getInstallSubjectKey,
   });
 })(globalThis);

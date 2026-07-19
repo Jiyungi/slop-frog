@@ -1,19 +1,25 @@
 import "../shared/runtime.js";
 import {
+  fetchVerdictHistory,
   fetchCommunityAggregate,
-  isSupabaseConfigured,
+  isInsForgeConfigured,
+  isProductApiConfigured,
+  recordScoreCache,
+  resolveScorePlan,
+  scorePostViaRuntype,
   submitAppeal,
   submitCommunityVote,
-} from "../shared/supabase.mjs";
+} from "../shared/product-api.mjs";
 
 const runtime = globalThis.SlopFrogRuntime;
 const memoryCache = new Map();
-const SUPABASE_CONFIG_STORAGE_KEY = "slopFrog.supabaseConfig";
-const SUPABASE_LOCAL_CONFIG_PATH = "src/shared/supabase-config.local.json";
+const PRODUCT_API_CONFIG_STORAGE_KEY = "slopFrog.productApiConfig";
+const PRODUCT_API_LOCAL_CONFIG_PATH = "src/shared/product-api-config.local.json";
+const LEGACY_SUPABASE_LOCAL_CONFIG_PATH = "src/shared/supabase-config.local.json";
 const AUTO_FILTER_OPT_IN_STORAGE_KEY = "slopFrog.autoFilterOptInDefault.v1";
 const SUPPORTED_PLATFORMS = new Set(["x", "linkedin"]);
 const DETECTOR_SCORE_TIMEOUT_MS = 20_000;
-let supabaseConfigPromise;
+let productApiConfigPromise;
 
 chrome.runtime.onInstalled.addListener(async () => {
   const settings = await getEffectiveSettings();
@@ -61,16 +67,19 @@ async function routeMessage(message) {
 
 async function getStatus() {
   const settings = await getEffectiveSettings();
-  const [detector, supabase] = await Promise.all([
-    fetchDetectorHealth(settings.localDetectorUrl),
-    getSupabaseStatus(),
+  const [detector, backend, runtype] = await Promise.all([
+    fetchDetectorHealth(resolveDetectorUrl(settings)),
+    getBackendStatus(),
+    getRuntypeStatus(),
   ]);
 
   return {
     ok: true,
     settings,
     detector,
-    supabase,
+    backend,
+    supabase: backend,
+    runtype,
   };
 }
 
@@ -91,57 +100,75 @@ async function scorePost(post) {
     return memoryCache.get(cacheKey);
   }
 
-  const [detectorResponse, communityAggregate] = await Promise.all([
-    callLocalDetector(post, settings),
-    fetchCommunityAggregateForPost(post),
-  ]);
+  const config = await getProductApiConfig();
+  const subjectKey = await runtime.getInstallSubjectKey();
+  const { detectorResponse, communityAggregate, scoreHistory, volumeHistory } =
+    await scorePostThroughProductPath(post, settings, config, subjectKey);
   const response = buildPanelResponse(
     post,
     detectorResponse,
     communityAggregate,
-    settings
+    settings,
+    scoreHistory,
+    volumeHistory
   );
 
   remember(cacheKey, response);
   return response;
 }
 
-async function getSupabaseStatus() {
-  const config = await getSupabaseConfig();
-  if (!isSupabaseConfigured(config)) {
+async function getBackendStatus() {
+  const config = await getProductApiConfig();
+  if (!isInsForgeConfigured(config)) {
     return {
       ok: false,
       status: "offline",
       label: "Not configured",
-      detail: "Run extension/dev/configure-supabase-from-env.mjs before loading the extension.",
+      detail: "Run extension/dev/configure-product-api-from-env.mjs before loading the extension.",
     };
   }
 
   try {
-    // A read for a non-existent key validates the live RPC path without
-    // creating records or exposing the underlying community tables.
     await fetchCommunityAggregate(config, "slop-frog:connection-check");
     return {
       ok: true,
       status: "connected",
       label: "Connected",
-      detail: "Supabase community layer is ready.",
+      detail: "InsForge community layer is ready.",
     };
   } catch (error) {
     return {
       ok: false,
       status: "offline",
       label: "Not connected",
-      detail: error?.message || "Supabase connection failed.",
+      detail: error?.message || "InsForge connection failed.",
     };
   }
 }
 
-async function getSupabaseConfig() {
-  if (!supabaseConfigPromise) {
-    supabaseConfigPromise = loadSupabaseConfig();
+async function getRuntypeStatus() {
+  const config = await getProductApiConfig();
+  if (!config.runtypeScorePostUrl) {
+    return {
+      ok: false,
+      status: "offline",
+      label: "Not configured",
+      detail: "Runtype score endpoint is not configured.",
+    };
   }
-  return supabaseConfigPromise;
+  return {
+    ok: true,
+    status: "connected",
+    label: "Configured",
+    detail: "Runtype score endpoint is configured.",
+  };
+}
+
+async function getProductApiConfig() {
+  if (!productApiConfigPromise) {
+    productApiConfigPromise = loadProductApiConfig();
+  }
+  return productApiConfigPromise;
 }
 
 async function getEffectiveSettings() {
@@ -162,32 +189,57 @@ async function getMigratedSettings() {
 }
 
 async function applyLocalRuntimeConfig(settings) {
-  const config = await getSupabaseConfig();
-  const detectorUrl = config.detectorUrl || config.localDetectorUrl;
-  if (!detectorUrl) return settings;
+  const config = await getProductApiConfig();
   return {
     ...settings,
-    localDetectorUrl: detectorUrl,
+    scoringApiUrl: config.runtypeScorePostUrl || settings.scoringApiUrl || "",
+    modalDetectorUrl:
+      config.modalDetectorUrl ||
+      settings.modalDetectorUrl ||
+      settings.localDetectorUrl ||
+      runtime.LOCAL_DETECTOR_URL,
+    publicQuota: Number(config.publicQuota || settings.publicQuota || 1),
+    userTier:
+      config.ownerReviewerId && config.ownerReviewerId === config.demoReviewerId
+        ? "owner_admin"
+        : settings.userTier || "public_guest",
   };
 }
 
-async function loadSupabaseConfig() {
-  const stored = await runtime.chromeGet(SUPABASE_CONFIG_STORAGE_KEY);
-  const storedConfig = stored[SUPABASE_CONFIG_STORAGE_KEY] || {};
+async function loadProductApiConfig() {
+  const stored = await runtime.chromeGet(PRODUCT_API_CONFIG_STORAGE_KEY);
+  const storedConfig = stored[PRODUCT_API_CONFIG_STORAGE_KEY] || {};
 
   try {
-    const response = await fetch(chrome.runtime.getURL(SUPABASE_LOCAL_CONFIG_PATH));
-    if (!response.ok) return storedConfig;
+    const response = await fetch(chrome.runtime.getURL(PRODUCT_API_LOCAL_CONFIG_PATH));
+    if (!response.ok) return loadLegacyConfig(storedConfig);
     const localConfig = await response.json();
     return { ...localConfig, ...storedConfig };
+  } catch {
+    return loadLegacyConfig(storedConfig);
+  }
+}
+
+async function loadLegacyConfig(storedConfig) {
+  try {
+    const response = await fetch(chrome.runtime.getURL(LEGACY_SUPABASE_LOCAL_CONFIG_PATH));
+    if (!response.ok) return storedConfig;
+    const legacyConfig = await response.json();
+    return {
+      ...legacyConfig,
+      insforgeUrl: legacyConfig.insforgeUrl || legacyConfig.url,
+      insforgeAnonKey: legacyConfig.insforgeAnonKey || legacyConfig.publishableKey,
+      modalDetectorUrl: legacyConfig.modalDetectorUrl || legacyConfig.detectorUrl,
+      ...storedConfig,
+    };
   } catch {
     return storedConfig;
   }
 }
 
 async function fetchCommunityAggregateForPost(post) {
-  const config = await getSupabaseConfig();
-  if (!isSupabaseConfigured(config)) return null;
+  const config = await getProductApiConfig();
+  if (!isInsForgeConfigured(config)) return null;
 
   try {
     return await fetchCommunityAggregate(config, post.contentKey);
@@ -199,6 +251,15 @@ async function fetchCommunityAggregateForPost(post) {
 }
 
 async function fetchDetectorHealth(localDetectorUrl) {
+  if (!localDetectorUrl) {
+    return {
+      ok: false,
+      status: "offline",
+      label: "Not configured",
+      detail: "No detector endpoint configured.",
+    };
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
@@ -223,7 +284,7 @@ async function fetchDetectorHealth(localDetectorUrl) {
       ok: isReady,
       status: isReady ? "connected" : "offline",
       label: isReady ? "Connected" : "Not connected",
-      detail: payload.model_loaded ? "Local model ready" : "Local model unavailable",
+      detail: payload.model_loaded ? "Detector ready" : "Detector unavailable",
       modelLoaded: Boolean(payload.model_loaded),
       service: payload.service,
       version: payload.version,
@@ -236,22 +297,121 @@ async function fetchDetectorHealth(localDetectorUrl) {
       detail:
         error?.name === "AbortError"
           ? "Detector timed out"
-          : "Start local detector",
+          : "Detector unavailable",
     };
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
-async function callLocalDetector(post, settings) {
+async function scorePostThroughProductPath(post, settings, config, subjectKey) {
+  const base = {
+    detectorResponse: runtime.makeGrayScoreResponse("detector_unavailable"),
+    communityAggregate: null,
+    scoreHistory: [],
+    volumeHistory: [],
+  };
+
+  const communityPromise = fetchCommunityAggregateForPost(post);
+  const historyPromise = fetchHistoryForPost(post);
+
+  if (isProductApiConfigured(config) && config.runtypeScorePostUrl) {
+    try {
+      const scored = await scorePostViaRuntype(config, {
+        post,
+        settings: {
+          evidenceCoverageMinimum: settings.evidenceCoverageMinimum,
+          redThreshold: settings.redThreshold,
+          yellowThreshold: settings.yellowThreshold,
+        },
+        subjectKey,
+        tier: settings.userTier,
+        publicQuota: settings.publicQuota,
+      });
+      return {
+        detectorResponse: scored.scoreResponse,
+        communityAggregate: scored.communityAggregate || (await communityPromise),
+        scoreHistory: await historyPromise,
+        volumeHistory: volumeFromHistory(await historyPromise),
+      };
+    } catch {
+      // Fall through to the direct controlled path for local demo resilience.
+    }
+  }
+
+  if (isInsForgeConfigured(config)) {
+    const plan = await resolveScorePlan(config, {
+      contentKey: post.contentKey,
+      platform: post.platform,
+      subjectKey,
+      tier: settings.userTier,
+      publicQuota: settings.publicQuota,
+    }).catch(() => null);
+
+    if (plan?.decision === "cache_hit") {
+      const cachedResponse = makeCachedScoreResponse(post, plan);
+      return {
+        detectorResponse: cachedResponse,
+        communityAggregate: await communityPromise,
+        scoreHistory: await historyPromise,
+        volumeHistory: volumeFromHistory(await historyPromise),
+      };
+    }
+
+    if (plan?.decision === "rate_limited") {
+      const rateLimited = runtime.makeGrayScoreResponse("rate_limited", "slop-frog-quota");
+      rateLimited.contentKey = post.contentKey;
+      rateLimited.rateLimitDecision = "rate_limited";
+      return {
+        detectorResponse: rateLimited,
+        communityAggregate: await communityPromise,
+        scoreHistory: await historyPromise,
+        volumeHistory: volumeFromHistory(await historyPromise),
+      };
+    }
+  }
+
+  if (config.allowDirectDetectorFallback === false && !config.runtypeScorePostUrl) {
+    const noApi = runtime.makeGrayScoreResponse("product_api_unavailable", "slop-frog-product-api");
+    noApi.contentKey = post.contentKey;
+    return { ...base, detectorResponse: noApi };
+  }
+
+  const detectorResponse = await callDetector(post, settings, resolveDetectorUrl(settings, config));
+  if (isInsForgeConfigured(config) && detectorResponse?.ok) {
+    await recordScoreCache(config, {
+      contentKey: post.contentKey,
+      platform: post.platform,
+      detectorScore: detectorResponse.detectorScore,
+      evidenceCoverage: detectorResponse.evidenceCoverage,
+      label: detectorResponse.labelRecommendation,
+      modelName: detectorResponse.modelName,
+      modelVersion: detectorResponse.modelVersion,
+      reasons: detectorResponse.reasons,
+    }).catch(() => null);
+  }
+
+  return {
+    detectorResponse,
+    communityAggregate: await communityPromise,
+    scoreHistory: await historyPromise,
+    volumeHistory: volumeFromHistory(await historyPromise),
+  };
+}
+
+async function callDetector(post, settings, detectorUrl) {
+  if (!detectorUrl) {
+    return runtime.makeGrayScoreResponse("detector_not_configured");
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
-    detectorTimeoutMs(settings.localDetectorUrl, "score")
+    detectorTimeoutMs(detectorUrl, "score")
   );
 
   try {
-    const response = await fetch(`${trimSlash(settings.localDetectorUrl)}/score`, {
+    const response = await fetch(`${trimSlash(detectorUrl)}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
@@ -287,9 +447,9 @@ async function submitVote(payload) {
   const post = resolveActionPost(payload);
   if (!post) return { ok: false, error: "missing_post_context" };
 
-  const config = await getSupabaseConfig();
-  if (!isSupabaseConfigured(config)) {
-    return { ok: false, error: "supabase_not_configured" };
+  const config = await getProductApiConfig();
+  if (!isInsForgeConfigured(config)) {
+    return { ok: false, error: "insforge_not_configured" };
   }
 
   try {
@@ -298,6 +458,7 @@ async function submitVote(payload) {
       platform: post.platform,
       vote: payload?.vote,
       reviewerId: config.demoReviewerId,
+      postId: post.postId,
       tweetId: post.tweetId,
       url: post.url,
       textHash: post.textHash,
@@ -308,7 +469,7 @@ async function submitVote(payload) {
     updateCachedCommunityPanel(post.contentKey, communityAggregate);
     return { ok: true, savedVote, communityAggregate };
   } catch (error) {
-    return { ok: false, error: error?.message || "supabase_vote_failed" };
+    return { ok: false, error: error?.message || "insforge_vote_failed" };
   }
 }
 
@@ -316,9 +477,9 @@ async function submitPostAppeal(payload) {
   const post = resolveActionPost(payload);
   if (!post) return { ok: false, error: "missing_post_context" };
 
-  const config = await getSupabaseConfig();
-  if (!isSupabaseConfigured(config)) {
-    return { ok: false, error: "supabase_not_configured" };
+  const config = await getProductApiConfig();
+  if (!isInsForgeConfigured(config)) {
+    return { ok: false, error: "insforge_not_configured" };
   }
 
   try {
@@ -332,7 +493,7 @@ async function submitPostAppeal(payload) {
     updateCachedCommunityPanel(post.contentKey, communityAggregate);
     return { ok: true, savedAppeal, communityAggregate };
   } catch (error) {
-    return { ok: false, error: error?.message || "supabase_appeal_failed" };
+    return { ok: false, error: error?.message || "insforge_appeal_failed" };
   }
 }
 
@@ -356,7 +517,14 @@ function updateCachedCommunityPanel(contentKey, communityAggregate) {
   );
 }
 
-function buildPanelResponse(post, scoreResponse, communityAggregate, settings) {
+function buildPanelResponse(
+  post,
+  scoreResponse,
+  communityAggregate,
+  settings,
+  scoreHistory = [],
+  volumeHistory = []
+) {
   const result = runtime.composeSlopScore(
     { ...scoreResponse, contentKey: post?.contentKey || "" },
     communityAggregate,
@@ -369,8 +537,8 @@ function buildPanelResponse(post, scoreResponse, communityAggregate, settings) {
     result,
     scoreResponse,
     communityAggregate,
-    scoreHistory: [],
-    volumeHistory: [],
+    scoreHistory,
+    volumeHistory,
     settings,
   };
 }
@@ -407,6 +575,59 @@ function supportedTabUrlPatterns() {
 
 function trimSlash(value) {
   return String(value || runtime.LOCAL_DETECTOR_URL).replace(/\/+$/, "");
+}
+
+function resolveDetectorUrl(settings, config = {}) {
+  return (
+    settings?.modalDetectorUrl ||
+    config?.modalDetectorUrl ||
+    settings?.localDetectorUrl ||
+    runtime.LOCAL_DETECTOR_URL
+  );
+}
+
+function makeCachedScoreResponse(post, plan) {
+  return {
+    ok: true,
+    contentKey: post.contentKey,
+    detectorScore:
+      plan.cached_detector_score === null || plan.cached_detector_score === undefined
+        ? null
+        : Number(plan.cached_detector_score),
+    evidenceCoverage: 100,
+    labelRecommendation: plan.cached_label || "gray",
+    reasons: Array.isArray(plan.cached_reasons) ? plan.cached_reasons : ["cache_hit"],
+    modalityScores: {
+      text: {
+        status: "available",
+        score:
+          plan.cached_detector_score === null || plan.cached_detector_score === undefined
+            ? undefined
+            : Number(plan.cached_detector_score),
+      },
+      image: { status: "unsupported", reason: "mvp_text_first" },
+      audio: { status: "unsupported", reason: "mvp_text_first" },
+      video: { status: "unsupported", reason: "mvp_text_first" },
+    },
+    modelName: plan.cached_model_name || "slop-frog-score-cache",
+    modelVersion: plan.cached_model_version || "cached",
+    rateLimitDecision: "cache_hit",
+  };
+}
+
+async function fetchHistoryForPost(post) {
+  const config = await getProductApiConfig();
+  if (!isInsForgeConfigured(config)) return [];
+  return fetchVerdictHistory(config, post.contentKey).catch(() => []);
+}
+
+function volumeFromHistory(history) {
+  return (history || [])
+    .filter((point) => point.slopScore !== null && point.slopScore !== undefined)
+    .map((point, index) => ({
+      volume: index + 1,
+      slopScore: point.slopScore,
+    }));
 }
 
 function detectorTimeoutMs(detectorUrl, purpose) {

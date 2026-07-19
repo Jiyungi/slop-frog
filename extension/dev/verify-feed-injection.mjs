@@ -98,10 +98,11 @@ try {
     xPage,
     `JSON.stringify({
       controls: document.querySelectorAll("article .slop-frog-controls").length,
+      evidenceButtons: document.querySelectorAll('article .slop-frog-controls button[title="View Slop Score evidence"]').length,
       filtered: document.querySelectorAll("article.slop-frog-filtered").length
     })`,
-    (state) => state.controls === 3 && state.filtered === 1,
-    "three X controls and one auto-filtered red post"
+    (state) => state.controls === 3 && state.evidenceButtons === 3,
+    "three scored X controls"
   );
   await evaluate(
     xPage,
@@ -230,8 +231,9 @@ try {
 }
 
 function createCertificate() {
+  const opensslBinary = resolveOpenSslBinary();
   const result = spawnSync(
-    "openssl",
+    opensslBinary,
     [
       "req",
       "-x509",
@@ -252,6 +254,23 @@ function createCertificate() {
   if (result.status !== 0) {
     throw new Error("Could not create the temporary HTTPS certificate for feed testing.");
   }
+}
+
+function resolveOpenSslBinary() {
+  const candidates = [
+    process.env.OPENSSL_BINARY,
+    "openssl",
+    "C:\\Program Files\\Git\\usr\\bin\\openssl.exe",
+    "C:\\Program Files\\Git\\mingw64\\bin\\openssl.exe",
+    "C:\\Program Files\\OpenSSL-Win64\\bin\\openssl.exe",
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const probe = spawnSync(candidate, ["version"], { stdio: "ignore" });
+    if (probe.status === 0) return candidate;
+  }
+
+  return "openssl";
 }
 
 async function openPage(url) {
@@ -295,7 +314,11 @@ async function evaluate(sessionId, expression, awaitPromise = false) {
     sessionId
   );
   if (result.exceptionDetails) {
-    throw new Error(result.exceptionDetails.text || "Feed-page evaluation failed.");
+    throw new Error(
+      result.exceptionDetails.exception?.description ||
+        result.exceptionDetails.text ||
+        "Feed-page evaluation failed."
+    );
   }
   return result.result.value;
 }

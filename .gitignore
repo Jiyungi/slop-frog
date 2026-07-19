@@ -9,9 +9,9 @@
 /local-detector/**/__pycache__/
 /modal-detector/**/__pycache__/
 
-# The unpacked extension reads this generated local-only configuration. It
-# contains a Supabase publishable key and demo reviewer identity, never a
-# server secret.
+# The unpacked extension reads generated local-only configuration. These files
+# may contain demo API keys and reviewer identity, never commit them.
+/extension/src/shared/product-api-config.local.json
 /extension/src/shared/supabase-config.local.json
 
 # InsForge & AI agent skills

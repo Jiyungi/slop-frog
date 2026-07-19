@@ -23,6 +23,14 @@ export type PanelKind = "evidence" | "feedback" | "appeal";
 
 export type SlopIconName = "Flag" | "MessageSquareCheck" | "ShieldAlert";
 
+export type UserTier = "public_guest" | "public_signed_in" | "owner_admin";
+
+export type RateLimitDecision =
+  | "cache_hit"
+  | "live_allowed"
+  | "rate_limited"
+  | "owner_bypass";
+
 export type ModalityStatus =
   | "available"
   | "unsupported"
@@ -32,9 +40,11 @@ export type ModalityStatus =
 export interface PostEnvelope {
   platform: Platform;
   contentKey: string;
+  postId?: string;
   tweetId?: string;
   url?: string;
   authorHandle?: string;
+  authorDisplayName?: string;
   visibleText: string;
   normalizedText: string;
   textHash?: string;
@@ -46,9 +56,13 @@ export interface ExtensionSettings {
   evidenceCoverageMinimum: number;
   redThreshold: number;
   yellowThreshold: number;
-  localDetectorUrl: string;
+  scoringApiUrl: string;
+  modalDetectorUrl: string;
+  localDetectorUrl?: string;
   showNumericScore: boolean;
   autoFilterRed: boolean;
+  publicQuota: number;
+  userTier: UserTier;
 }
 
 export interface ScoreRequest {
@@ -57,6 +71,7 @@ export interface ScoreRequest {
     ExtensionSettings,
     "evidenceCoverageMinimum" | "redThreshold" | "yellowThreshold"
   >;
+  subjectKey?: string;
 }
 
 export interface ModalityScore {
@@ -103,6 +118,13 @@ export interface SlopScoreResult {
   evidenceCoverage: number;
   reasons: string[];
   autoFiltered: boolean;
+  rateLimitDecision?: RateLimitDecision;
+}
+
+export interface RateLimitState {
+  decision: RateLimitDecision;
+  shouldCallDetector: boolean;
+  remaining: number | null;
 }
 
 export interface SlopControl {
@@ -162,6 +184,20 @@ export interface CommunityVote {
   reviewerId: string;
   reviewerWeight: number;
   createdAt: string;
+}
+
+export interface ProductApiConfig {
+  runtypeScorePostUrl?: string;
+  runtypeSubmitFeedbackUrl?: string;
+  runtypeSubmitAppealUrl?: string;
+  runtypeProductApiKey?: string;
+  insforgeUrl?: string;
+  insforgeAnonKey?: string;
+  modalDetectorUrl?: string;
+  demoReviewerId: string;
+  ownerReviewerId?: string;
+  publicQuota?: number;
+  allowDirectDetectorFallback?: boolean;
 }
 
 export interface AppealRequest {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Frog",
-  "description": "Local-first AI-content flags for social feeds.",
+  "description": "AI-content flags for X and LinkedIn feeds.",
   "version": "0.1.0",
   "permissions": ["storage"],
   "host_permissions": [
@@ -9,9 +9,9 @@
     "https://twitter.com/*",
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
-    "http://localhost:8765/*",
     "https://*.modal.run/*",
-    "https://*.supabase.co/*"
+    "https://api.runtype.com/*",
+    "https://*.insforge.app/*"
   ],
   "background": {
     "service_worker": "src/background/index.js",

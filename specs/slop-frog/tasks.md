@@ -55,13 +55,13 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 2.1-2.5, 3.1-3.6_
     - **Verification:** `rg "supabase|localhost:8765|Person A|Person B" extension specs/slop-frog` shows no stale required architecture references except migration/history notes.
 
-  - [ ] 2.2 Update threshold and gray-state constants
+  - [x] 2.2 Update threshold and gray-state constants
     - Keep red > 75, yellow 40 through 75, green < 40, gray for insufficient signal.
     - Ensure auto-filter default is false.
     - _Requirements: 7.4, 8.1-8.5, 13.1_
     - **Verification:** Fixture tests or manual score fixtures produce expected red, yellow, green, and gray labels.
 
-  - [ ] 2.3 Add Runtype and InsForge environment contract
+  - [x] 2.3 Add Runtype and InsForge environment contract
     - Document required variables for Runtype product API, Modal detector URL, and InsForge backend.
     - Document owner/admin identifier configuration.
     - Remove Supabase as the target backend from new setup docs.
@@ -147,12 +147,12 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 11.2-11.6, 14.1-14.4_
     - **Verification:** A fixture with one `looks_ai`, one `looks_human`, and one `unsure` vote returns the expected weighted score.
 
-  - [ ] 5.4 Implement feedback write path
+  - [x] 5.4 Implement feedback write path
     - Store explicit votes and update/recompute aggregate.
     - _Requirements: 11.1-11.6_
     - **Verification:** A feedback action from the extension creates/updates a backend vote and changes visible Slop Score when appropriate.
 
-  - [ ] 5.5 Implement appeal write path
+  - [x] 5.5 Implement appeal write path
     - Store appeal reason and status.
     - _Requirements: 12.1-12.5_
     - **Verification:** An appeal from the extension creates a backend appeal record.
@@ -182,7 +182,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 6B.10-6B.12, 17.12_
     - **Verification:** Owner/admin test subject can score multiple uncached posts without rate-limit fallback.
 
-  - [ ] 6.4 Add graceful quota UI
+  - [x] 6.4 Add graceful quota UI
     - When quota is exhausted, show cached/community results if available.
     - If no score is available, show gray with reason `rate_limited`.
     - _Requirements: 6B.9, 18.6-18.7_
@@ -226,17 +226,17 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** Popup is readable, compact, and has no unnecessary explainer text.
 
 - [ ] 8. Stabilize LinkedIn support
-  - [ ] 8.1 Verify LinkedIn content script matching
+  - [x] 8.1 Verify LinkedIn content script matching
     - Ensure manifest host permissions and content script matches include LinkedIn.
     - _Requirements: 1.3, 2.1_
     - **Verification:** Extension content script runs on LinkedIn feed pages.
 
-  - [ ] 8.2 Implement/repair LinkedIn adapter selectors
+  - [x] 8.2 Implement/repair LinkedIn adapter selectors
     - Extract visible LinkedIn post text and metadata into the same `Post_Envelope` shape.
     - _Requirements: 2.3-2.5_
     - **Verification:** At least three LinkedIn feed posts produce valid envelopes.
 
-  - [ ] 8.3 Render LinkedIn compact controls
+  - [x] 8.3 Render LinkedIn compact controls
     - Add controls without colliding with LinkedIn buttons.
     - _Requirements: 1.3, 9.1-9.5_
     - **Verification:** At least three LinkedIn posts show flags.
@@ -252,7 +252,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 11.6_
     - **Verification:** Community score renders as a clean integer/label in evidence panel.
 
-  - [ ] 9.3 Make graphs honest
+  - [x] 9.3 Make graphs honest
     - If only one verdict-history event exists, show a flat/single-point state.
     - If no real history exists, show unavailable instead of fake trend movement.
     - _Requirements: 10.7-10.10_
@@ -307,7 +307,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** README or release notes explain how a normal person installs and what happens after quota is exhausted.
 
 - [ ] 12. Final demo verification
-  - [ ] 12.1 Run extension syntax checks
+  - [x] 12.1 Run extension syntax checks
     - Run existing extension verification commands.
     - _Requirements: 1.1-1.6_
     - **Verification:** `node --check` and existing verification script pass.
@@ -322,12 +322,12 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 5.1-5.8_
     - **Verification:** All three endpoints return successful non-placeholder responses.
 
-  - [ ] 12.4 Run InsForge backend checks
+  - [x] 12.4 Run InsForge backend checks
     - Verify schema, vote write, appeal write, aggregate read, and verdict-history read.
     - _Requirements: 6.1-6.7, 11.1-11.6, 12.1-12.5_
     - **Verification:** Backend rows exist and match expected fixture output.
 
-  - [ ] 12.5 Run public quota checks
+  - [x] 12.5 Run public quota checks
     - Test public rate-limited subject.
     - Test owner/admin bypass.
     - _Requirements: 6B.7-6B.12, 17.11-17.13_

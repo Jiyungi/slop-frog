@@ -1,6 +1,7 @@
 const detectorStatus = document.querySelector("#detectorStatus");
-const detectorUrl = document.querySelector("#detectorUrl");
-const supabaseStatus = document.querySelector("#supabaseStatus");
+const backendStatus = document.querySelector("#backendStatus");
+const runtypeStatus = document.querySelector("#runtypeStatus");
+const quotaStatus = document.querySelector("#quotaStatus");
 const showNumericScore = document.querySelector("#showNumericScore");
 const autoFilterRed = document.querySelector("#autoFilterRed");
 
@@ -10,12 +11,16 @@ async function initPopup() {
   const status = await sendMessage({ type: "SLOP_FROG_GET_STATUS" });
   const settings = status.settings || globalThis.SlopFrogRuntime.DEFAULT_EXTENSION_SETTINGS;
 
-  detectorUrl.textContent = settings.localDetectorUrl;
   showNumericScore.checked = Boolean(settings.showNumericScore);
   autoFilterRed.checked = Boolean(settings.autoFilterRed);
 
   setStatus(detectorStatus, status.detector);
-  setStatus(supabaseStatus, status.supabase);
+  setStatus(backendStatus, status.backend || status.supabase);
+  setStatus(runtypeStatus, status.runtype);
+  quotaStatus.textContent =
+    settings.userTier === "owner_admin"
+      ? "Admin"
+      : `Live checks: ${Number(settings.publicQuota || 1)}/day`;
 
   showNumericScore.addEventListener("change", save);
   autoFilterRed.addEventListener("change", save);
@@ -45,7 +50,8 @@ function setStatus(element, value) {
 function sendMessage(message) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(message, (response) => {
-      resolve(response || { ok: false });
+      const lastError = chrome.runtime.lastError;
+      resolve(response || { ok: false, error: lastError?.message });
     });
   });
 }

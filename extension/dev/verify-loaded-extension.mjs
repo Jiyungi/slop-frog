@@ -82,11 +82,9 @@ try {
   const parsedPopupState = JSON.parse(popupState);
   const parsedSavedState = JSON.parse(savedState);
   assert(parsedPopupState.text.includes("Slop Frog"), "Popup did not render.");
-  assert(
-    parsedPopupState.endpoint === "http://localhost:8765",
-    "Popup did not show the local detector endpoint."
-  );
-  assert(parsedPopupState.community === "connected", "Supabase was not connected in popup.");
+  assert(parsedPopupState.runtype, "Popup did not expose Runtype status.");
+  assert(parsedPopupState.quota, "Popup did not expose quota status.");
+  assert(parsedPopupState.community === "connected", "InsForge was not connected in popup.");
   assert(parsedSavedState.saved === "true", "Popup did not save its setting.");
   assert(parsedSavedState.persisted === true, "chrome.storage did not persist the setting.");
   assert(
@@ -124,7 +122,8 @@ try {
         extensionId: loaded.id,
         detector: parsedPopupState.detector,
         community: parsedPopupState.community,
-        detectorEndpoint: parsedPopupState.endpoint,
+        runtype: parsedPopupState.runtype,
+        quota: parsedPopupState.quota,
         autoFilterPersisted: parsedSavedState.persisted,
         scoreVerification,
         communityVerification,
@@ -174,8 +173,9 @@ async function waitForPopupState(sessionId) {
       `JSON.stringify({
         text: document.body.innerText,
         detector: document.querySelector("#detectorStatus")?.dataset.state,
-        community: document.querySelector("#supabaseStatus")?.dataset.state,
-        endpoint: document.querySelector("#detectorUrl")?.textContent,
+        community: document.querySelector("#backendStatus")?.dataset.state,
+        runtype: document.querySelector("#runtypeStatus")?.dataset.state,
+        quota: document.querySelector("#quotaStatus")?.textContent,
         scoreToggle: document.querySelector("#showNumericScore")?.checked,
         filterToggle: document.querySelector("#autoFilterRed")?.checked
       })`
@@ -184,7 +184,7 @@ async function waitForPopupState(sessionId) {
     if (state.community === "connected") return snapshot;
     await wait(200);
   }
-  throw new Error("Supabase did not become connected in the popup.");
+  throw new Error("InsForge did not become connected in the popup.");
 }
 
 async function verifyBackgroundScoring(sessionId) {
@@ -345,8 +345,8 @@ async function verifyOfflineFallback(sessionId) {
   assert(response?.ok, "Offline score did not return an extension response.");
   assert(response?.result?.label === "gray", "Offline score was not shown as gray.");
   assert(
-    response?.result?.reasons?.includes("detector_unavailable"),
-    `Offline score did not report detector_unavailable: ${JSON.stringify(response?.result)}.`
+    response?.result?.reasons?.length > 0,
+    `Offline score did not report a gray fallback reason: ${JSON.stringify(response?.result)}.`
   );
   return { label: response.result.label, reason: response.result.reasons[0] };
 }

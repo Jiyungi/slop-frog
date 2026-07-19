@@ -155,6 +155,10 @@ h1 {
   color: var(--frog-danger);
 }
 
+#quotaStatus {
+  color: var(--frog-accent);
+}
+
 input[type="checkbox"] {
   position: relative;
   width: 36px;
