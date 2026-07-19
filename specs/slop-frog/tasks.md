@@ -178,7 +178,7 @@ This means there is no teammate split. The work is still staged in waves so the 
 
   - [x] 6.2 Add public quota buckets
     - Create quota logic for public users.
-    - Default public quota: one new uncached live inference per rolling 24 hours per install/account.
+    - Default public quota: 15 new uncached live inferences per rolling 24 hours per install/account.
     - _Requirements: 6B.7-6B.9_
     - **Verification:** A public test subject can score one uncached post live, then receives `rate_limited` fallback for the next uncached post.
 

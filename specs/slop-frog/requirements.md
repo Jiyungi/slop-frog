@@ -170,7 +170,7 @@ The end product is not just a developer-mode demo. Slop Frog should become a Chr
 5. THE controlled API SHALL check score cache before requesting live Modal inference.
 6. IF a content item already has a fresh cached detector score, THEN the system SHALL reuse it without calling Modal.
 7. Public anonymous users SHALL be severely rate-limited for live Modal inference.
-8. The default public quota SHALL be one new uncached live inference per rolling 24-hour window per install or account until a different business model exists.
+8. The default public quota SHALL be 15 new uncached live inferences per rolling 24-hour window per install or account until a different business model exists.
 9. After quota is exhausted, THE system SHALL still show cached scores, community scores, and gray states where appropriate.
 10. Owner/admin users SHALL be able to bypass public rate limits.
 11. Rate-limit bypass SHALL be enforced server-side, not only in the extension UI.

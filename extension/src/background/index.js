@@ -209,7 +209,7 @@ async function applyLocalRuntimeConfig(settings) {
       config.modalDetectorUrl ||
       settings.modalDetectorUrl ||
       "",
-    publicQuota: Number(config.publicQuota || settings.publicQuota || 1),
+    publicQuota: Number(config.publicQuota || settings.publicQuota || 15),
     userTier:
       config.ownerReviewerId && config.ownerReviewerId === config.demoReviewerId
         ? "owner_admin"

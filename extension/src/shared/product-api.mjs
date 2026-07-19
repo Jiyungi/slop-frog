@@ -37,7 +37,7 @@ export async function resolveScorePlan(config, payload, fetchImpl = globalThis.f
     p_platform: payload.platform,
     p_subject_key: payload.subjectKey,
     p_tier: payload.tier || "public_guest",
-    p_public_quota: payload.publicQuota ?? 1,
+    p_public_quota: payload.publicQuota ?? 15,
   }, fetchImpl);
   return rows?.[0] || null;
 }

@@ -18,6 +18,6 @@ export const DEFAULT_EXTENSION_SETTINGS: ExtensionSettings = {
   modalDetectorUrl: DEFAULT_MODAL_DETECTOR_URL,
   showNumericScore: false,
   autoFilterRed: false,
-  publicQuota: 1,
+  publicQuota: 15,
   userTier: "public_guest",
 };

@@ -20,7 +20,7 @@ async function initPopup() {
   quotaStatus.textContent =
     settings.userTier === "owner_admin"
       ? "Admin"
-      : `Live checks: ${Number(settings.publicQuota || 1)}/day`;
+      : `Live checks: ${Number(settings.publicQuota || 15)}/day`;
 
   showNumericScore.addEventListener("change", save);
   autoFilterRed.addEventListener("change", save);

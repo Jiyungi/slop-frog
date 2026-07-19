@@ -228,7 +228,7 @@ Public Chrome Web Store users are rate-limited. The UI should make this understa
 Use short language:
 
 ```text
-Live checks left: 1
+Live checks left: 15
 ```
 
 or:

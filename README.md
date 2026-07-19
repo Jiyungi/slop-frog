@@ -76,7 +76,7 @@ The long-term product is a Chrome Web Store extension normal people can install.
 
 Default policy:
 
-- Public users get one new uncached live inference per rolling 24 hours.
+- Public users get 15 new uncached live inferences per rolling 24 hours.
 - Cached scores and community signals can still be shown after quota is exhausted.
 - If there is no cached/community signal, the post becomes gray with a rate-limit reason.
 - Owner/admin users can bypass public limits for demos and development.
@@ -97,7 +97,7 @@ Create `.env` from `.env.example` and fill in real values:
 ```text
 SLOP_FROG_DEMO_REVIEWER_ID=demo-reviewer-local
 SLOP_FROG_OWNER_REVIEWER_ID=demo-reviewer-local
-SLOP_FROG_PUBLIC_QUOTA=1
+SLOP_FROG_PUBLIC_QUOTA=15
 SLOP_FROG_ALLOW_DIRECT_DETECTOR_FALLBACK=true
 SLOP_FROG_MODAL_DETECTOR_URL=https://YOUR-MODAL-ENDPOINT.modal.run
 
