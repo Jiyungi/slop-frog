@@ -13,6 +13,7 @@
 # may contain demo API keys and reviewer identity, never commit them.
 /extension/src/shared/product-api-config.local.json
 /extension/src/shared/supabase-config.local.json
+/benchmark/exports/*.json
 
 # InsForge & AI agent skills
 .insforge

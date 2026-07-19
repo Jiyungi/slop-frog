@@ -287,13 +287,14 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 17.1-17.10_
     - **Verification:** README contains the updated project description.
 
-  - [ ] 11.2 Update setup instructions
+  - [x] 11.2 Update setup instructions
     - Explain Modal deployment/health check.
     - Explain Runtype product key vs admin key.
     - Explain InsForge backend setup.
     - Explain loading the unpacked extension.
     - _Requirements: 4.8, 5.1-5.8, 6.1-6.7, 17.1-17.10_
     - **Verification:** A fresh reader can reach Modal health and load the extension using docs only.
+    - **Status:** Verified by updating `README.md` with Modal health, InsForge config, Runtype env, Chrome unpacked loading, and current verification commands.
 
   - [ ] 11.3 Add demo script
     - Create a short demo path for judges.
@@ -301,10 +302,17 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 17.2-17.10_
     - **Verification:** Demo can be completed once without editing code mid-demo.
 
-  - [ ] 11.4 Add Chrome Web Store readiness notes
+  - [x] 11.4 Add Chrome Web Store readiness notes
     - Document public rate limit, privacy posture, required permissions, and no local-model requirement for public users.
     - _Requirements: 18.1-18.8_
     - **Verification:** README or release notes explain how a normal person installs and what happens after quota is exhausted.
+    - **Status:** Verified by documenting public install target, public quota, cache/community fallback, gray rate-limit fallback, and owner/admin bypass in `README.md`.
+
+  - [x] 11.5 Add public benchmark export documentation
+    - Explain how cleaned public benchmark examples are generated from explicit labels.
+    - Explain that raw media, raw post IDs, handles, emails, phones, and URLs are not exported.
+    - _Requirements: 15.1-15.7, 16.1-16.4_
+    - **Verification:** `node benchmark/export-public-benchmark.mjs --limit 5 --dry-run` returns deduped cleaned examples with `content_key_hash` and no raw media.
 
 - [ ] 12. Final demo verification
   - [x] 12.1 Run extension syntax checks
