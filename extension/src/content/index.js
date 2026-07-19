@@ -189,10 +189,12 @@
     ".comments-comment-item",
     ".comments-comment-entity",
     ".comments-comment-list__comment-item",
+    ".comments-comments-list__comment-item",
     ".comments-reply-item",
     ".comments-replies-list__reply-item",
     ".comments-thread-entity",
     ".comment-thread-node",
+    '[class*="comments-comment-item"]',
     '[data-test-id="comments-comment-item"]',
     '[data-test-id*="comments-comment"]',
     '[data-test-id*="comments-reply"]',
@@ -203,6 +205,10 @@
     ".comments-comment-text",
     ".comments-comment-item__commentary",
     ".comments-comment-item__text",
+    ".comments-comment-item__body",
+    ".comments-comment-item__body-content",
+    ".comments-comment-item__content",
+    ".comments-comment-item__container",
     ".comments-reply-item__main-content",
     ".comments-reply-item-content-body",
     ".comments-comment-item-content-body",
@@ -334,10 +340,16 @@
             ".comments-comment-item__social-actions",
             ".comments-comment-social-actions",
             ".comments-comment-item__social-counts",
+            ".comments-comment-social-counts",
+            ".social-details-social-counts",
             'button[aria-label*="Like"][aria-label*="comment" i]',
             'button[aria-label*="Reply" i]',
+            'button[aria-label*="React" i]',
+            'button[aria-label*="Comment" i]',
             '[aria-label*="Like"][aria-label*="comment" i]',
             '[aria-label*="Reply" i]',
+            '[aria-label*="React" i]',
+            '[aria-label*="Comment" i]',
           ].join(", ")
         )
       )
@@ -467,8 +479,11 @@
       comment.querySelector(".comments-comment-item__social-actions") ||
       comment.querySelector(".comments-comment-social-actions") ||
       comment.querySelector(".comments-comment-item__social-counts") ||
+      comment.querySelector(".comments-comment-social-counts") ||
       comment.querySelector('button[aria-label*="Like"]')?.closest('[role="group"], .social-actions, div') ||
       comment.querySelector('button[aria-label*="Reply"]')?.closest('[role="group"], .social-actions, div') ||
+      comment.querySelector('button[aria-label*="React"]')?.closest('[role="group"], .social-actions, div') ||
+      comment.querySelector('button[aria-label*="Comment"]')?.closest('[role="group"], .social-actions, div') ||
       comment
     );
   }
@@ -515,9 +530,14 @@
           [
             ".comments-post-meta",
             ".comments-comment-meta",
+            ".comments-comment-meta__actor",
             ".comments-comment-item__post-meta",
             ".comments-comment-item__main-content",
             ".comments-comment-item-content-body",
+            ".comments-comment-item__body",
+            ".comments-comment-item__body-content",
+            ".comments-comment-item__content",
+            ".comments-comment-item__container",
             ".comments-comment-entity__content",
           ].join(", ")
         )
@@ -565,6 +585,7 @@
             ".comments-comment-item__social-actions",
             ".comments-comment-social-actions",
             ".comments-comment-item__social-counts",
+            ".comments-comment-social-counts",
             ".comment-actions",
             '[role="group"]',
           ].join(", ")
@@ -815,7 +836,7 @@
       panels: document.querySelectorAll(".slop-frog-panel").length,
       duplicateContentKeys: keys.length - new Set(keys).size,
       linkedInComments: document.querySelectorAll(
-        ".comments-comment-item, .comments-reply-item, .comments-replies-list__reply-item, .comments-thread-entity, .comment-thread-node"
+        '.comments-comment-item, [class*="comments-comment-item"], .comments-reply-item, .comments-replies-list__reply-item, .comments-thread-entity, .comment-thread-node'
       ).length,
       linkedInCommentControls: document.querySelectorAll(
         ".slop-frog-slot.is-linkedin-comment .slop-frog-controls"
@@ -1513,7 +1534,18 @@
       }
 
       .slop-frog-slot.is-linkedin-comment {
+        box-sizing: border-box !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+        float: none !important;
+        clear: both !important;
+        position: relative !important;
+        inset: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
         margin-top: 4px !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
       }
 
       .slop-frog-slot.is-linkedin-comment .slop-frog-controls {

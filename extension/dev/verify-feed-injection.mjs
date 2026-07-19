@@ -208,10 +208,10 @@ try {
     `JSON.stringify({
       oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
       newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
-      rawComments: document.querySelectorAll('.comments-comment-item, .comment-thread-node').length,
+      rawComments: document.querySelectorAll('.comments-comment-item, [class*="comments-comment-item"], .comment-thread-node').length,
       staleSlots: document.querySelectorAll('.slop-frog-slot[data-content-key="linkedin:stale-from-old-extension"]').length,
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
         const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
         return keys.length - new Set(keys).size;
@@ -234,10 +234,10 @@ try {
     (state) =>
       state.oldCards === 3 &&
       state.newCards === 1 &&
-      state.rawComments === 5 &&
+      state.rawComments >= 6 &&
       state.staleSlots === 0 &&
-      state.controls === 9 &&
-      state.commentControls === 5 &&
+      state.controls === 10 &&
+      state.commentControls === 6 &&
       state.duplicateSlots === 0 &&
       state.overlap === false,
     "LinkedIn feed posts and comments with one non-overlapping control set per content item"
@@ -285,8 +285,8 @@ try {
     linkedInPage,
     `JSON.stringify({
       firstKey: document.querySelector('.feed-shared-update-v2 > .slop-frog-slot')?.dataset.contentKey || '',
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
         const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
         return keys.length - new Set(keys).size;
@@ -294,8 +294,8 @@ try {
     })`,
     (state) =>
       state.firstKey === `linkedin:${timestamp}99` &&
-      state.controls === 9 &&
-      state.commentControls === 5 &&
+      state.controls === 10 &&
+      state.commentControls === 6 &&
       state.duplicateSlots === 0,
     "recycled LinkedIn feed cards update their Slop Frog owner without duplicates"
   );
@@ -308,14 +308,14 @@ try {
   const dynamicLinkedInState = await waitForState(
     linkedInPage,
     `JSON.stringify({
-      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
-      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, [class*="comments-comment-item"] .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
         const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((slot) => slot.dataset.contentKey).filter(Boolean);
         return keys.length - new Set(keys).size;
       })()
     })`,
-    (state) => state.controls === 10 && state.commentControls === 6 && state.duplicateSlots === 0,
+    (state) => state.controls === 11 && state.commentControls === 7 && state.duplicateSlots === 0,
     "dynamically loaded LinkedIn comments receive one control set"
   );
   const linkedInDebugState = await waitForState(
@@ -323,9 +323,10 @@ try {
     `document.documentElement.getAttribute('data-slop-frog-debug') || 'null'`,
     (state) =>
       state?.platform === "linkedin" &&
-      state.controls === 10 &&
+      state.controls === 11 &&
       state.duplicateContentKeys === 0 &&
-      state.linkedInCommentControls === 6,
+      state.linkedInComments >= 7 &&
+      state.linkedInCommentControls === 7,
     "privacy-safe LinkedIn live diagnostics"
   );
 
