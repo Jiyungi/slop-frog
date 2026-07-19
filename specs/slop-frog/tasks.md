@@ -128,12 +128,12 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 6.1_
     - **Verification:** `npx @insforge/cli current --json` shows the linked `slop_frog` project.
 
-  - [ ] 5.2 Create InsForge schema
+  - [x] 5.2 Create InsForge schema
     - Add tables for content items, reviewers, community votes, appeals, verdict history, training candidates, dataset batches, model registry, eval results, score cache, rate-limit buckets, and rate-limit events.
     - _Requirements: 6.2-6.10, 6A.1-6A.9, 6B.5-6B.12, 14.1-14.6, 15.1-15.7, 16.1-16.7_
     - **Verification:** InsForge SQL query confirms all required tables exist.
 
-  - [ ] 5.2.1 Create actual InsForge migration file
+  - [x] 5.2.1 Create actual InsForge migration file
     - Use `npx @insforge/cli db migrations new migrate_slop_frog_schema`.
     - Port the useful Supabase schema into InsForge/Postgres migration SQL.
     - Normalize `tweet_id` to `post_id`.
@@ -142,7 +142,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 6A.1-6A.9_
     - **Verification:** Migration applies with `npx @insforge/cli db migrations up --all`.
 
-  - [ ] 5.3 Implement community aggregate query
+  - [x] 5.3 Implement community aggregate query
     - Compute weighted community score from explicit votes and reviewer quality.
     - _Requirements: 11.2-11.6, 14.1-14.4_
     - **Verification:** A fixture with one `looks_ai`, one `looks_human`, and one `unsure` vote returns the expected weighted score.
@@ -164,19 +164,19 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** A post with one score and one later vote has at least two verdict-history events.
 
 - [ ] 6. Implement public rate limiting and score cache
-  - [ ] 6.1 Add score cache lookup
+  - [x] 6.1 Add score cache lookup
     - Check `score_cache` before calling Modal.
     - Reuse fresh detector scores by `content_key`.
     - _Requirements: 6B.5-6B.6, 15.8-15.9_
     - **Verification:** Scoring the same content twice results in one Modal call and one cache hit.
 
-  - [ ] 6.2 Add public quota buckets
+  - [x] 6.2 Add public quota buckets
     - Create quota logic for public users.
     - Default public quota: one new uncached live inference per rolling 24 hours per install/account.
     - _Requirements: 6B.7-6B.9_
     - **Verification:** A public test subject can score one uncached post live, then receives `rate_limited` fallback for the next uncached post.
 
-  - [ ] 6.3 Add owner/admin bypass
+  - [x] 6.3 Add owner/admin bypass
     - Configure owner/admin identity server-side.
     - Bypass public quota for owner/admin requests.
     - _Requirements: 6B.10-6B.12, 17.12_
@@ -259,18 +259,18 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** One-event fixture does not render fake rising graph.
 
 - [ ] 10. Implement privacy-safe learning-loop foundation
-  - [ ] 10.1 Store training candidates only from explicit labels
+  - [x] 10.1 Store training candidates only from explicit labels
     - Votes and appeals may create candidates.
     - Passive scrolling must not create training examples.
     - _Requirements: 15.1-15.7, 16.1-16.3_
     - **Verification:** Scoring a post without voting does not create a training candidate.
 
-  - [ ] 10.2 Add PII-cleaning metadata
+  - [x] 10.2 Add PII-cleaning metadata
     - Track cleaning status and PII risk for each candidate.
     - _Requirements: 15.5-15.7, 16.3_
     - **Verification:** Candidate records include cleaning status before dataset batch membership.
 
-  - [ ] 10.3 Add dataset batch workflow placeholder
+  - [x] 10.3 Add dataset batch workflow placeholder
     - Runtype `prepare_training_batch` should select cleaned candidates and create a batch record.
     - _Requirements: 16.1-16.4_
     - **Verification:** Running the workflow on fixtures produces a batch metadata record, not a full training job.
