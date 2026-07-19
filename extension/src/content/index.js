@@ -90,6 +90,7 @@
       }
 
       if (previousKey === envelope.contentKey && articleMounts.get(article)?.isConnected) {
+        ensureMount(article, envelope.contentKey);
         continue;
       }
 
@@ -873,6 +874,10 @@
     if (mount?.isConnected) {
       const slot = mount.closest(".slop-frog-slot");
       if (slot && contentKey) slot.dataset.contentKey = contentKey;
+      if (slot) {
+        placeSlot(article, slot);
+        removeDuplicateSlots(article, slot);
+      }
       return mount;
     }
     mount = article.querySelector(":scope > .slop-frog-slot > .slop-frog-controls");
@@ -892,15 +897,30 @@
     mount.setAttribute("aria-label", "Slop Frog controls");
 
     slot.append(mount);
-    const insertionPoint = activeAdapter?.findInsertionPoint(article);
-    if (insertionPoint && insertionPoint !== article) {
-      insertionPoint.insertAdjacentElement("afterend", slot);
-    } else {
-      article.append(slot);
-    }
+    placeSlot(article, slot);
+    removeDuplicateSlots(article, slot);
 
     articleMounts.set(article, mount);
     return mount;
+  }
+
+  function placeSlot(article, slot) {
+    const insertionPoint = activeAdapter?.findInsertionPoint(article);
+    if (insertionPoint && insertionPoint !== article) {
+      if (insertionPoint.nextElementSibling !== slot) {
+        insertionPoint.insertAdjacentElement("afterend", slot);
+      }
+    } else {
+      if (slot.parentElement !== article || article.lastElementChild !== slot) {
+        article.append(slot);
+      }
+    }
+  }
+
+  function removeDuplicateSlots(article, keepSlot) {
+    article.querySelectorAll(":scope > .slop-frog-slot").forEach((slot) => {
+      if (slot !== keepSlot) slot.remove();
+    });
   }
 
   function findXActionGroup(article) {

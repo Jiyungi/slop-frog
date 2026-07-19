@@ -246,6 +246,35 @@ try {
     linkedInPage,
     `(() => {
       const card = document.querySelector('.feed-shared-update-v2');
+      const slot = card.querySelector(':scope > .slop-frog-slot');
+      card.prepend(slot);
+      card.setAttribute('data-slop-frog-placement-test', String(Date.now()));
+    })()`
+  );
+  const linkedInRepositionState = await waitForState(
+    linkedInPage,
+    `JSON.stringify((() => {
+      const card = document.querySelector('.feed-shared-update-v2');
+      const slot = card.querySelector(':scope > .slop-frog-slot');
+      return {
+        previousClass: slot?.previousElementSibling?.className || '',
+        directSlots: card.querySelectorAll(':scope > .slop-frog-slot').length,
+        duplicateSlots: (() => {
+          const keys = Array.from(document.querySelectorAll('.slop-frog-slot[data-content-key]')).map((item) => item.dataset.contentKey).filter(Boolean);
+          return keys.length - new Set(keys).size;
+        })()
+      };
+    })())`,
+    (state) =>
+      String(state.previousClass).includes('feed-shared-social-action-bar') &&
+      state.directSlots === 1 &&
+      state.duplicateSlots === 0,
+    "LinkedIn misplaced controls are repositioned without duplicates"
+  );
+  await evaluate(
+    linkedInPage,
+    `(() => {
+      const card = document.querySelector('.feed-shared-update-v2');
       card.setAttribute('data-urn', 'urn:li:activity:${timestamp}99');
       card.querySelector('a[href*="/feed/update/"]').href = 'https://www.linkedin.com/feed/update/urn:li:activity:${timestamp}99/';
       card.querySelector('.update-components-text').textContent =
@@ -316,6 +345,7 @@ try {
         stableControlCount,
       },
         linkedIn: linkedInState,
+        linkedInReposition: linkedInRepositionState,
         recycledLinkedIn: recycledLinkedInState,
         dynamicLinkedIn: dynamicLinkedInState,
         linkedInDebug: linkedInDebugState,
