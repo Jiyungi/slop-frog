@@ -97,6 +97,9 @@
         return (
           post.querySelector(".feed-shared-social-action-bar") ||
           post.querySelector(".social-actions") ||
+          post.querySelector('[data-test-id*="social-actions"]') ||
+          post.querySelector('button[aria-label*="Comment"]')?.closest('[role="group"], .social-actions, div') ||
+          post.querySelector('button[aria-label*="Repost"]')?.closest('[role="group"], .social-actions, div') ||
           post.querySelector('[aria-label*="React"]')?.closest('[role="group"]') ||
           post.querySelector('[aria-label*="Like"]')?.closest('[role="group"]') ||
           post.querySelector(".social-details-social-counts") ||
@@ -111,9 +114,13 @@
     ".feed-shared-inline-show-more-text",
     ".feed-shared-text",
     ".break-words",
+    ".attributed-text-segment-list__content",
+    ".update-components-update-v2__commentary",
+    ".feed-shared-update-v2__commentary",
     ".feed-shared-update-v2__description-wrapper",
     '[data-test-id="main-feed-activity-card__commentary"]',
     '[data-test-id="feed-shared-update-v2__commentary"]',
+    '[data-test-id*="commentary"]',
     '[dir="ltr"]',
   ];
 
@@ -170,6 +177,7 @@
   function extractLinkedInPost(post) {
     const url = firstHref(post, [
       'a[href*="/feed/update/"]',
+      'a[href*="/posts/"]',
       'a[href*="activity:"]',
       'a[href*="urn:li:activity"]',
     ]);
@@ -230,6 +238,9 @@
         [
           ".feed-shared-update-v2",
           ".occludable-update",
+          ".fie-impression-container",
+          '[data-view-name="feed-full-update"]',
+          '[data-view-name="profile-component-entity"]',
           '[data-urn*="urn:li:activity"]',
           '[data-id*="urn:li:activity"]',
           "[data-activity-urn]",
@@ -238,16 +249,73 @@
     );
     const fromText = Array.from(root.querySelectorAll(LINKEDIN_TEXT_SELECTORS.join(", ")))
       .map((node) =>
-        node.closest(
-          '.feed-shared-update-v2, .occludable-update, [data-urn*="urn:li:activity"], [data-id*="urn:li:activity"], [data-activity-urn], article'
-        )
+        closestLinkedInPostContainer(node)
       )
       .filter(Boolean);
+    const fromLinks = Array.from(
+      root.querySelectorAll(
+        [
+          'a[href*="/feed/update/"]',
+          'a[href*="/posts/"]',
+          'a[href*="urn:li:activity"]',
+          'a[href*="activity:"]',
+        ].join(", ")
+      )
+    )
+      .map((node) => closestLinkedInPostContainer(node))
+      .filter(Boolean);
+    const fromActions = Array.from(
+      root.querySelectorAll(
+        [
+          ".feed-shared-social-action-bar",
+          ".social-actions",
+          'button[aria-label*="Like"]',
+          'button[aria-label*="Comment"]',
+          'button[aria-label*="Repost"]',
+        ].join(", ")
+      )
+    )
+      .map((node) => closestLinkedInPostContainer(node))
+      .filter(Boolean);
 
-    return uniqueTopLevel([...direct, ...fromText]).filter((post) => {
+    return uniqueTopLevel([...direct, ...fromText, ...fromLinks, ...fromActions].map(closestLinkedInPostContainer).filter(Boolean)).filter((post) => {
       const text = getLinkedInText(post);
       return text.length > 8 || imageUrlsFrom(post).length > 0;
     });
+  }
+
+  function closestLinkedInPostContainer(node) {
+    if (!node) return null;
+    const preferred = node.closest(
+      [
+        ".feed-shared-update-v2",
+        ".occludable-update",
+        ".fie-impression-container",
+        '[data-view-name="feed-full-update"]',
+        '[data-urn*="urn:li:activity"]',
+        '[data-id*="urn:li:activity"]',
+        "[data-activity-urn]",
+        "article",
+      ].join(", ")
+    );
+    if (preferred && preferred !== document.body && preferred.tagName !== "MAIN") {
+      return preferred;
+    }
+
+    let current = node.closest("div, article, li");
+    for (let depth = 0; current && depth < 9; depth += 1) {
+      if (current === document.body || current.tagName === "MAIN") return null;
+      const text = cleanLinkedInText(current.innerText || current.textContent || "");
+      const hasActivityLink = Boolean(
+        current.querySelector('a[href*="/feed/update/"], a[href*="/posts/"], a[href*="urn:li:activity"], a[href*="activity:"]')
+      );
+      const hasActionBar = Boolean(
+        current.querySelector('.feed-shared-social-action-bar, .social-actions, button[aria-label*="Like"], button[aria-label*="Comment"], button[aria-label*="Repost"]')
+      );
+      if (text.length > 20 && (hasActivityLink || hasActionBar)) return current;
+      current = current.parentElement?.closest("div, article, li") || null;
+    }
+    return null;
   }
 
   function getLinkedInText(post) {

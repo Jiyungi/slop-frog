@@ -9,6 +9,7 @@
     "https://twitter.com/*",
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
+    "https://*.linkedin.com/*",
     "https://*.modal.run/*",
     "https://api.runtype.com/*",
     "https://*.insforge.app/*"
@@ -23,7 +24,8 @@
         "https://x.com/*",
         "https://twitter.com/*",
         "https://www.linkedin.com/*",
-        "https://linkedin.com/*"
+        "https://linkedin.com/*",
+        "https://*.linkedin.com/*"
       ],
       "js": ["src/shared/runtime.js", "src/content/index.js"],
       "run_at": "document_idle"

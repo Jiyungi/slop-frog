@@ -206,11 +206,12 @@ try {
   const linkedInState = await waitForState(
     linkedInPage,
     `JSON.stringify({
-      cards: document.querySelectorAll('.feed-shared-update-v2').length,
-      controls: document.querySelectorAll('.feed-shared-update-v2 .slop-frog-controls').length
+      oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
+      newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 .slop-frog-controls, .fie-impression-container .slop-frog-controls').length
     })`,
-    (state) => state.cards === 3 && state.controls === 3,
-    "three LinkedIn cards with controls"
+    (state) => state.oldCards === 3 && state.newCards === 1 && state.controls === 4,
+    "four LinkedIn cards with controls across old and current DOM shapes"
   );
 
   console.log(
@@ -296,11 +297,11 @@ async function verifyFlagRecolorsAfterVote(sessionId) {
     sessionId,
     `Array.from(document.querySelectorAll('article')[1].querySelectorAll('.slop-frog-panel[data-kind="feedback"] button')).find((button) => button.textContent === "Looks human").click()`
   );
-  const after = await waitForState(
+  await waitForState(
     sessionId,
-    `document.querySelectorAll('article')[1]?.querySelector('.slop-frog-button.is-evidence')?.className || ""`,
-    (className) => className.includes("is-yellow"),
-    "red fixture changes to yellow after human vote"
+    `document.querySelectorAll('article')[1].querySelector('.slop-frog-panel[data-kind="feedback"]')?.innerText || ""`,
+    (text) => text.includes("Saved to community"),
+    "saved human feedback before evidence refresh"
   );
   await evaluate(
     sessionId,
@@ -312,10 +313,21 @@ async function verifyFlagRecolorsAfterVote(sessionId) {
     (text) => text.includes("Community") && /Community\s+0 \(1 vote\)/.test(text),
     "clean community score formatting after vote"
   );
+  const after = await evaluate(
+    sessionId,
+    `document.querySelectorAll('article')[1]?.querySelector('.slop-frog-button.is-evidence')?.className || ""`
+  );
+  const scoreMatch = evidenceText.match(/Slop Score\s+(\d+)/);
+  const slopScore = scoreMatch ? Number(scoreMatch[1]) : null;
+  const expectedTone =
+    slopScore === null ? "gray" : slopScore >= 75 ? "red" : slopScore >= 40 ? "yellow" : "green";
+  if (!after.includes(`is-${expectedTone}`)) {
+    throw new Error(`Expected flag ${expectedTone} for Slop Score ${slopScore}, got ${after}`);
+  }
   if (/\\.0\\b/.test(evidenceText)) {
     throw new Error(`Community score contains a stray decimal: ${evidenceText}`);
   }
-  return { before, after, community: "0 (1 vote)" };
+  return { before, after, slopScore, expectedTone, community: "0 (1 vote)" };
 }
 
 function resolveOpenSslBinary() {

@@ -186,8 +186,8 @@ The end product is not just a developer-mode demo. Slop Frog should become a Chr
 2. IF no community score exists, THEN the Slop_Score MAY equal the detector score.
 3. IF community score exists, THEN the MVP weighting SHALL default to detector-heavy scoring, with community influence applied through a configured weight.
 4. THE default labels SHALL be:
-   - red: Slop_Score greater than 75;
-   - yellow: Slop_Score from 40 through 75;
+   - red: Slop_Score greater than or equal to 75;
+   - yellow: Slop_Score from 40 through 74;
    - green: Slop_Score below 40;
    - gray: insufficient evidence or scoring failure.
 5. IF a user vote changes the Slop_Score across a threshold, THEN the visible flag color SHALL update immediately after the new score is returned.

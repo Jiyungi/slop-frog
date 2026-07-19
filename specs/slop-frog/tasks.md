@@ -57,7 +57,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - **Status:** Verified by removing legacy Supabase helpers/config fallback, removing localhost detector defaults, and renaming the old contract verifier to `verify-extension-contracts.mjs`. Remaining Supabase mentions are historical migration notes outside the active extension architecture.
 
   - [x] 2.2 Update threshold and gray-state constants
-    - Keep red > 75, yellow 40 through 75, green < 40, gray for insufficient signal.
+    - Keep red >= 75, yellow 40 through 74, green < 40, gray for insufficient signal.
     - Ensure auto-filter default is false.
     - _Requirements: 7.4, 8.1-8.5, 13.1_
     - **Verification:** Fixture tests or manual score fixtures produce expected red, yellow, green, and gray labels.

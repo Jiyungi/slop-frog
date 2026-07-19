@@ -14,7 +14,8 @@
         font: 16px/1.5 system-ui, sans-serif;
       }
 
-      .feed-shared-update-v2 {
+      .feed-shared-update-v2,
+      .fie-impression-container {
         margin: 16px 0;
         padding: 18px;
         border: 1px solid #dbe3e8;
@@ -78,6 +79,21 @@
           <span>Like</span><span>Comment</span><span>Repost</span>
         </div>
       </article>
+
+      <div class="fie-impression-container" data-view-name="feed-full-update" data-id="urn:li:activity:10004">
+        <div class="update-components-actor__name">Current DOM Tester</div>
+        <div class="update-components-actor__title">Frontend engineer</div>
+        <a href="https://www.linkedin.com/feed/update/urn:li:activity:10004/">Post</a>
+        <div class="attributed-text-segment-list__content">
+          This fixture uses a newer LinkedIn feed container shape so Slop Frog does
+          not depend only on the older feed-shared-update-v2 class.
+        </div>
+        <div class="social-actions" role="group">
+          <button aria-label="Like Current DOM Tester’s post">Like</button>
+          <button aria-label="Comment on Current DOM Tester’s post">Comment</button>
+          <button aria-label="Repost Current DOM Tester’s post">Repost</button>
+        </div>
+      </div>
     </main>
   </body>
 </html>

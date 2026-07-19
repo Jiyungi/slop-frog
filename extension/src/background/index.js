@@ -475,7 +475,9 @@ async function submitVote(payload) {
       textSnapshot: post.normalizedText,
       authorHandle: post.authorHandle,
     });
-    const communityAggregate = await fetchCommunityAggregate(config, post.contentKey);
+    const communityAggregate =
+      (await fetchCommunityAggregate(config, post.contentKey)) ||
+      communityAggregateFromSavedVote(post.contentKey, savedVote, payload?.vote);
     updateCachedCommunityPanel(post.contentKey, communityAggregate);
     return { ok: true, savedVote, communityAggregate };
   } catch (error) {
@@ -525,6 +527,25 @@ function updateCachedCommunityPanel(contentKey, communityAggregate) {
       cached.settings
     )
   );
+}
+
+function communityAggregateFromSavedVote(contentKey, savedVote, vote) {
+  if (!savedVote && !vote) return null;
+  const normalizedVote = savedVote?.vote || vote;
+  const weightedAiScore =
+    normalizedVote === "looks_ai" ? 100 : normalizedVote === "looks_human" ? 0 : 50;
+  return {
+    contentKey: savedVote?.contentKey || contentKey,
+    voteCount: 1,
+    communityScore: weightedAiScore,
+    weightedAiScore,
+    looksAiWeight: normalizedVote === "looks_ai" ? Number(savedVote?.reviewerWeight || 1) : 0,
+    looksHumanWeight: normalizedVote === "looks_human" ? Number(savedVote?.reviewerWeight || 1) : 0,
+    unsureWeight: normalizedVote === "unsure" ? Number(savedVote?.reviewerWeight || 1) : 0,
+    appealStatus: null,
+    latestVerdictLabel: null,
+    updatedAt: savedVote?.createdAt || new Date().toISOString(),
+  };
 }
 
 function buildPanelResponse(

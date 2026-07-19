@@ -79,7 +79,7 @@
   function labelForScore(score, settings = DEFAULT_EXTENSION_SETTINGS) {
     const cleanScore = clampScore(score);
     if (cleanScore === null) return "gray";
-    if (cleanScore > settings.redThreshold) return "red";
+    if (cleanScore >= settings.redThreshold) return "red";
     if (cleanScore >= settings.yellowThreshold) return "yellow";
     return "green";
   }

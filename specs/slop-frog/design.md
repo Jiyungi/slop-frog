@@ -420,8 +420,8 @@ else:
   else:
     slopScore = detectorScore
 
-  red if slopScore > 75
-  yellow if 40 <= slopScore <= 75
+  red if slopScore >= 75
+  yellow if 40 <= slopScore < 75
   green if slopScore < 40
 ```
 

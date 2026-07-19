@@ -28,7 +28,7 @@ for (const ref of manifestRefs) {
 
 const runtime = loadRuntime();
 assert(runtime.labelForScore(76) === "red", "76 is red");
-assert(runtime.labelForScore(75) === "yellow", "75 is yellow boundary");
+assert(runtime.labelForScore(75) === "red", "75 is red boundary");
 assert(runtime.labelForScore(40) === "yellow", "40 is yellow boundary");
 assert(runtime.labelForScore(39) === "green", "39 is green");
 
