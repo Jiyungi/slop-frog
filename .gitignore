@@ -14,6 +14,7 @@
 /extension/src/shared/product-api-config.local.json
 /extension/src/shared/supabase-config.local.json
 /benchmark/exports/*.json
+/dist/
 
 # InsForge & AI agent skills
 .insforge
