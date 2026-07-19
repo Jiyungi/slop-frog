@@ -36,6 +36,7 @@
     window.addEventListener("scroll", guardedEvent(queueScan), { passive: true });
     document.addEventListener("keydown", guardedEvent(closePanelsOnEscape));
     chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+    installDebugHook();
   }
 
   async function getSettings() {
@@ -121,6 +122,7 @@
           renderScored(article, makeLocalGrayResponse(article, "extension_unavailable"));
         });
     }
+    publishDebugSnapshot();
   }
 
   function getPlatformAdapter(location) {
@@ -769,6 +771,48 @@
       );
       renderSlopControls(article, payload);
     }
+  }
+
+  function installDebugHook() {
+    try {
+      Object.defineProperty(window, "__slopFrogDebug", {
+        configurable: true,
+        value: debugSnapshot,
+      });
+      publishDebugSnapshot();
+    } catch {
+      // Debug hook is optional; never block feed injection for it.
+    }
+  }
+
+  function publishDebugSnapshot() {
+    try {
+      document.documentElement.setAttribute(
+        "data-slop-frog-debug",
+        JSON.stringify(debugSnapshot())
+      );
+    } catch {
+      // Diagnostics are best-effort and never include post text.
+    }
+  }
+
+  function debugSnapshot() {
+    const candidates = activeAdapter?.findPosts(document) || [];
+    const slots = Array.from(document.querySelectorAll(".slop-frog-slot"));
+    const keys = slots.map((slot) => slot.dataset.contentKey).filter(Boolean);
+    return {
+      platform: activeAdapter?.platform || "unknown",
+      candidates: candidates.length,
+      controls: document.querySelectorAll(".slop-frog-controls").length,
+      panels: document.querySelectorAll(".slop-frog-panel").length,
+      duplicateContentKeys: keys.length - new Set(keys).size,
+      linkedInComments: document.querySelectorAll(
+        ".comments-comment-item, .comments-reply-item, .comments-replies-list__reply-item, .comments-thread-entity, .comment-thread-node"
+      ).length,
+      linkedInCommentControls: document.querySelectorAll(
+        ".slop-frog-slot.is-linkedin-comment .slop-frog-controls"
+      ).length,
+    };
   }
 
   function renderFilterCard(article) {

@@ -287,6 +287,16 @@ try {
     (state) => state.controls === 10 && state.commentControls === 6 && state.duplicateSlots === 0,
     "dynamically loaded LinkedIn comments receive one control set"
   );
+  const linkedInDebugState = await waitForState(
+    linkedInPage,
+    `document.documentElement.getAttribute('data-slop-frog-debug') || 'null'`,
+    (state) =>
+      state?.platform === "linkedin" &&
+      state.controls === 10 &&
+      state.duplicateContentKeys === 0 &&
+      state.linkedInCommentControls === 6,
+    "privacy-safe LinkedIn live diagnostics"
+  );
 
   console.log(
     JSON.stringify(
@@ -306,6 +316,7 @@ try {
         linkedIn: linkedInState,
         recycledLinkedIn: recycledLinkedInState,
         dynamicLinkedIn: dynamicLinkedInState,
+        linkedInDebug: linkedInDebugState,
       },
       null,
       2

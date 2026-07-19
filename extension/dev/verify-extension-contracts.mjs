@@ -143,6 +143,13 @@ assert(
   "DOM helper accepts multiple children"
 );
 assert(
+  contentScript.includes("__slopFrogDebug") &&
+    contentScript.includes("data-slop-frog-debug") &&
+    contentScript.includes("duplicateContentKeys") &&
+    contentScript.includes("linkedInCommentControls"),
+  "content script exposes privacy-safe live diagnostics"
+);
+assert(
   sliceFunction(contentScript, "createEvidencePanel").includes('"Slop Score"'),
   "evidence panel renders Slop Score row"
 );
