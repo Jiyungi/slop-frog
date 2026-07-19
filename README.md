@@ -178,6 +178,8 @@ The benchmark is not created by scraping everyone’s feed. It is created from p
 
 See [benchmark/README.md](benchmark/README.md).
 
+For presentation flow, see [docs/demo-script.md](docs/demo-script.md).
+
 ## MVP limits
 
 - The current detector is text-first. Image/audio/video rows are shown honestly as unsupported or MVP text-first until real multimodal detectors are integrated.

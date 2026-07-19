@@ -304,11 +304,12 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** A fresh reader can reach Modal health and load the extension using docs only.
     - **Status:** Verified by updating `README.md` with Modal health, InsForge config, Runtype env, Chrome unpacked loading, and current verification commands.
 
-  - [ ] 11.3 Add demo script
+  - [x] 11.3 Add demo script
     - Create a short demo path for judges.
     - Include X, LinkedIn if stable, evidence, feedback, appeal, and auto-filter opt-in.
     - _Requirements: 17.2-17.10_
     - **Verification:** Demo can be completed once without editing code mid-demo.
+    - **Status:** Verified by adding `docs/demo-script.md` with preflight checks, X flow, LinkedIn flow, feedback, appeal, auto-filter, benchmark export, and safety close.
 
   - [x] 11.4 Add Chrome Web Store readiness notes
     - Document public rate limit, privacy posture, required permissions, and no local-model requirement for public users.
