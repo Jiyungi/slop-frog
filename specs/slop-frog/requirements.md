@@ -117,8 +117,8 @@ The end product is not just a developer-mode demo. Slop Frog should become a Chr
 
 1. THE Runtype product SHALL expose a `score_post` capability.
 2. THE `score_post` workflow SHALL accept a `Score_Request`, call the Modal detector, and return a normalized `Score_Response`.
-3. THE Runtype product SHALL expose a `submit_feedback` capability.
-4. THE Runtype product SHALL expose a `submit_appeal` capability.
+3. THE Runtype product SHALL expose a feedback capability; the current working endpoint is `submit_feedback_insforge`.
+4. THE Runtype product SHALL expose an appeal capability; the current working endpoint is `submit_appeal_insforge`.
 5. THE Runtype product SHALL include an agent or workflow for preparing cleaned learning batches from explicit labeled data.
 6. THE Runtype product SHALL include eval suites for scoring workflow correctness, detector regression, and privacy-cleaning quality.
 7. THE extension SHOULD call Runtype as the stable product API once the hackathon integration path is ready.

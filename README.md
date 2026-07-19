@@ -49,7 +49,7 @@ Chrome extension
   -> renders flag, evidence, feedback, appeal, and optional auto-filter UI
 
 Runtype
-  -> intended product workflow layer for score_post, feedback, appeal,
+  -> product workflow layer for score_post, feedback, appeal,
      training-batch preparation, and eval gates
 
 InsForge
@@ -105,11 +105,20 @@ INSFORGE_BACKEND_URL=https://YOUR_APPKEY.us-east.insforge.app
 INSFORGE_ANON_KEY=YOUR_INSFORGE_ANON_KEY
 
 RUNTYPE_PRODUCT_ID=YOUR_RUNTYPE_PRODUCT_ID
+RUNTYPE_SURFACE_ID=YOUR_RUNTYPE_SURFACE_ID
 RUNTYPE_SCORE_POST_URL=YOUR_RUNTYPE_SCORE_POST_ENDPOINT
 RUNTYPE_SUBMIT_FEEDBACK_URL=YOUR_RUNTYPE_FEEDBACK_ENDPOINT
 RUNTYPE_SUBMIT_APPEAL_URL=YOUR_RUNTYPE_APPEAL_ENDPOINT
 RUNTYPE_PRODUCT_API_KEY=YOUR_RUNTYPE_PRODUCT_API_KEY
 ```
+
+To create the working Runtype feedback and appeal endpoints for this product, run:
+
+```bash
+node runtype/setup-slop-frog-actions.mjs --write-env
+```
+
+This creates `submit_feedback_insforge` and `submit_appeal_insforge` flows, exposes them on the Runtype API surface, and updates the local `.env` endpoint URLs without writing secrets into the repo.
 
 Generate the extension’s ignored local config:
 
@@ -184,5 +193,5 @@ For presentation flow, see [docs/demo-script.md](docs/demo-script.md).
 
 - The current detector is text-first. Image/audio/video rows are shown honestly as unsupported or MVP text-first until real multimodal detectors are integrated.
 - LinkedIn backend scraping is out of scope. The extension can analyze text visible in the user’s browser.
-- Runtype scoring must return a real detector-backed response before it is marked production-ready. Empty Runtype verdicts fail safe into the fallback path.
+- Runtype scoring, feedback, and appeal workflows must return real non-placeholder responses before they are marked production-ready. Empty Runtype verdicts fail safe into the fallback path.
 - Chrome Web Store release still needs final policy review, production Runtype key, and production rate-limit hardening.

@@ -89,7 +89,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 4.4-4.5_
     - **Verification:** A `/score` response includes non-placeholder `modelName` and `modelVersion`.
 
-- [ ] 4. Wire Runtype product workflows
+- [x] 4. Wire Runtype product workflows
   - [x] 4.1 Create Runtype product and API surface
     - Product: Slop Frog.
     - Surface: Slop Frog API.
@@ -120,11 +120,11 @@ This means there is no teammate split. The work is still staged in waves so the 
     - **Verification:** A live post score is produced through Runtype, not only direct Modal, and the response includes a rate-limit/cache decision.
     - **Status:** Verified by strict Runtype product API scoring plus browser fixture checks. The extension now checks InsForge quota/cache before live Runtype scoring and writes detector results back to cache/history.
 
-  - [ ] 4.5 Connect feedback and appeal to Runtype
+  - [x] 4.5 Connect feedback and appeal to Runtype
     - Route feedback and appeal submissions through Runtype or through InsForge functions called by Runtype.
     - _Requirements: 5.3-5.4, 11.1-11.6, 12.1-12.5_
     - **Verification:** A live feedback submission and appeal submission reach the backend through the intended workflow path.
-    - **Status:** Not complete. Direct Runtype endpoint checks currently return placeholder bodies (`feedback_record: null`, `appeal_record: null`), so the extension continues to use the verified InsForge direct path for feedback and appeals.
+    - **Status:** Verified. `node runtype/setup-slop-frog-actions.mjs --write-env` created `submit_feedback_insforge` and `submit_appeal_insforge`; strict `SLOP_FROG_VERIFY_RUNTYPE=1 node extension/dev/verify-product-api.mjs` confirms both endpoints write non-placeholder InsForge records.
 
 - [ ] 5. Migrate backend from Supabase to InsForge
   - [x] 5.1 Link InsForge project
@@ -335,11 +335,11 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 4.1-4.8_
     - **Verification:** Both endpoints return successful responses.
 
-  - [ ] 12.3 Run Runtype workflow checks
+  - [x] 12.3 Run Runtype workflow checks
     - Verify score, feedback, and appeal endpoints.
     - _Requirements: 5.1-5.8_
     - **Verification:** All three endpoints return successful non-placeholder responses.
-    - **Status:** Partially verified. `score_post` returns a real detector-backed response; `submit_feedback` and `submit_appeal` still return placeholder records and are not marked complete.
+    - **Status:** Verified with strict `SLOP_FROG_VERIFY_RUNTYPE=1 node extension/dev/verify-product-api.mjs`; `score_post` returns a detector-backed Imbue/Qwen response, `submit_feedback_insforge` writes an InsForge vote, and `submit_appeal_insforge` writes an InsForge appeal.
 
   - [x] 12.4 Run InsForge backend checks
     - Verify schema, vote write, appeal write, aggregate read, and verdict-history read.

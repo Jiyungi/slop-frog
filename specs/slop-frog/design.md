@@ -87,8 +87,9 @@ graph TD
     UI --> Evidence[Evidence panel]
     UI --> Feedback[Feedback panel]
     UI --> Appeal[Appeal panel]
-    Feedback --> IF
-    Appeal --> IF
+    Feedback --> RT
+    Appeal --> RT
+    RT --> IF
 ```
 
 During debugging, the extension may call Modal directly to isolate failures. For product architecture, sponsor alignment, and cost control, the stable public path must be extension -> Runtype -> InsForge quota/cache -> Modal only when allowed.
@@ -643,8 +644,8 @@ Rules:
 
 - Product exists.
 - `score_post` endpoint accepts fixture payloads.
-- `submit_feedback` endpoint accepts a fixture vote.
-- `submit_appeal` endpoint accepts a fixture appeal.
+- `submit_feedback_insforge` endpoint accepts a fixture vote and writes an InsForge vote.
+- `submit_appeal_insforge` endpoint accepts a fixture appeal and writes an InsForge appeal.
 - Eval suites exist for scoring, detector regression, and privacy cleaning.
 
 ### InsForge checks

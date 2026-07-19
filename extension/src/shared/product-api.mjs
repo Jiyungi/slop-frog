@@ -221,7 +221,13 @@ async function callRuntypeAction(config, url, payload, fetchImpl) {
   const response = await fetchImpl(url, {
     method: "POST",
     headers: productHeaders(config, "runtype"),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      secrets: {
+        insforgeUrl: config.insforgeUrl,
+        insforgeAnonKey: config.insforgeAnonKey,
+      },
+    }),
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {

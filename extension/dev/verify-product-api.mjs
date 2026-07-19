@@ -20,6 +20,8 @@ const stamp = Date.now();
 const contentKey = `x:js-api-${stamp}`;
 const config = {
   runtypeScorePostUrl: envValue("RUNTYPE_SCORE_POST_URL"),
+  runtypeSubmitFeedbackUrl: envValue("RUNTYPE_SUBMIT_FEEDBACK_URL"),
+  runtypeSubmitAppealUrl: envValue("RUNTYPE_SUBMIT_APPEAL_URL"),
   runtypeProductApiKey: envValue("RUNTYPE_PRODUCT_API_KEY"),
   insforgeUrl: required("INSFORGE_BACKEND_URL"),
   insforgeAnonKey:
@@ -59,6 +61,10 @@ if (config.runtypeScorePostUrl) {
     if (envValue("SLOP_FROG_VERIFY_RUNTYPE") === "1") throw error;
     console.log(`- Runtype detector-backed score skipped: ${error.message}`);
   }
+}
+
+if (envValue("SLOP_FROG_VERIFY_RUNTYPE") === "1") {
+  await verifyRuntypeActionWorkflows(config, stamp);
 }
 
 await submitCommunityVote(config, vote("looks_ai", "ai"));
@@ -192,6 +198,65 @@ function vote(voteValue, suffix) {
       "This X benchmark verification fixture has enough public text to test cleaned training data generation without storing raw handles or email addresses.",
     authorHandle: "@slopfrog",
   };
+}
+
+async function verifyRuntypeActionWorkflows(currentConfig, currentStamp) {
+  const actionContentKey = `x:js-runtype-action-${currentStamp}`;
+  assert(
+    currentConfig.runtypeSubmitFeedbackUrl && currentConfig.runtypeSubmitAppealUrl,
+    "Runtype feedback and appeal endpoints are configured"
+  );
+
+  const feedback = await callRuntypeEndpoint(currentConfig, currentConfig.runtypeSubmitFeedbackUrl, {
+    kind: "feedback",
+    vote: {
+      contentKey: actionContentKey,
+      platform: "x",
+      vote: "looks_ai",
+      reviewerId: `js-runtype-feedback-${currentStamp}`,
+      postId: `${currentStamp}`,
+      tweetId: `${currentStamp}`,
+      url: `https://x.com/slopfrog/status/${currentStamp}`,
+      textHash: `js-runtype-action-hash-${currentStamp}`,
+      textSnapshot:
+        "This public fixture verifies that Runtype community feedback writes through InsForge.",
+      authorHandle: "@slopfrog",
+    },
+  });
+  assert(feedback?.feedback_record?.ok === true, "Runtype feedback workflow writes an InsForge vote");
+
+  const appeal = await callRuntypeEndpoint(currentConfig, currentConfig.runtypeSubmitAppealUrl, {
+    kind: "appeal",
+    appeal: {
+      contentKey: actionContentKey,
+      reviewerId: `js-runtype-appeal-${currentStamp}`,
+      reason: "missing_context",
+      status: "submitted",
+    },
+  });
+  assert(appeal?.appeal_record?.id, "Runtype appeal workflow writes an InsForge appeal");
+}
+
+async function callRuntypeEndpoint(currentConfig, url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${currentConfig.runtypeProductApiKey}`,
+    },
+    body: JSON.stringify({
+      ...payload,
+      secrets: {
+        insforgeUrl: currentConfig.insforgeUrl,
+        insforgeAnonKey: currentConfig.insforgeAnonKey,
+      },
+    }),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.message || body?.error || `Runtype endpoint failed (HTTP ${response.status}).`);
+  }
+  return body;
 }
 
 function readEnv(filePath) {
