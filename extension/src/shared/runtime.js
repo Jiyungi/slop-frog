@@ -98,7 +98,17 @@
       ? [...scoreResponse.reasons]
       : [];
 
-    if (!scoreResponse?.ok || scoreResponse?.labelRecommendation === "gray") {
+    const hasEnoughEvidence =
+      evidenceCoverage >= Number(mergedSettings.evidenceCoverageMinimum || 0);
+
+    if (
+      !scoreResponse?.ok ||
+      scoreResponse?.labelRecommendation === "gray" ||
+      !hasEnoughEvidence
+    ) {
+      if (!hasEnoughEvidence && !reasons.includes("not_enough_signal")) {
+        reasons.push("not_enough_signal");
+      }
       return {
         contentKey: scoreResponse?.contentKey || "",
         label: "gray",

@@ -44,6 +44,26 @@ const gray = runtime.composeSlopScore(
 assert(gray.label === "gray", "gray response stays gray");
 assert(gray.slopScore === null, "gray response has no Slop Score");
 
+const shortTextScore = runtime.composeSlopScore(
+  {
+    ok: true,
+    contentKey: "linkedin:fixture-short-comment",
+    platform: "linkedin",
+    detectorScore: 10,
+    evidenceCoverage: 20,
+    labelRecommendation: "green",
+    reasons: ["fixture_short_text"],
+  },
+  null,
+  runtime.DEFAULT_EXTENSION_SETTINGS
+);
+assert(shortTextScore.label === "gray", "low evidence coverage stays gray");
+assert(shortTextScore.slopScore === null, "low evidence coverage has no Slop Score");
+assert(
+  shortTextScore.reasons.includes("not_enough_signal"),
+  "low evidence coverage explains not enough signal"
+);
+
 const scored = runtime.composeSlopScore(
   {
     ok: true,

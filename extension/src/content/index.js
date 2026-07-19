@@ -137,11 +137,11 @@
   ];
 
   const LINKEDIN_COMMENT_TEXT_SELECTORS = [
-    ".comments-comment-item__main-content",
-    ".comments-comment-item-content-body",
-    ".comments-comment-entity__content",
     ".comments-comment-item__inline-show-more-text",
     ".comments-comment-text",
+    ".comments-comment-item-content-body",
+    ".comments-comment-entity__content",
+    ".comments-comment-item__main-content",
     ".update-components-text",
     ".break-words",
     '[dir="ltr"]',

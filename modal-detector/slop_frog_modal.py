@@ -235,7 +235,7 @@ def calculate_evidence_coverage(text: str) -> float:
 
 
 def label_for_score(score: float, red_threshold: float, yellow_threshold: float) -> str:
-    if score > red_threshold:
+    if score >= red_threshold:
         return "red"
     if score >= yellow_threshold:
         return "yellow"

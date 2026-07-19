@@ -16,6 +16,7 @@ for (const expected of [
   '@web_app.post("/score")',
   '"labelRecommendation"',
   '"modalityScores"',
+  "score >= red_threshold",
 ]) {
   assert(source.includes(expected), `modal detector includes ${expected}`);
 }
