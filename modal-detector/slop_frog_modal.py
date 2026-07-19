@@ -154,9 +154,13 @@ detector = ModalQwenDetector()
     image=image,
     gpu=os.environ.get("SLOP_FROG_MODAL_GPU", "L4"),
     volumes={CACHE_DIR: hf_cache},
-    timeout=150,
-    scaledown_window=600,
+    timeout=300,
+    startup_timeout=300,
+    min_containers=1,
+    max_containers=1,
+    scaledown_window=1_800,
 )
+@modal.concurrent(max_inputs=1)
 @modal.asgi_app()
 def api():
     from fastapi import FastAPI

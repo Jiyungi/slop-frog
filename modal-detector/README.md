@@ -59,8 +59,20 @@ Reload the Chrome extension in `chrome://extensions`.
 
 ## Warm it before the demo
 
-The first request downloads/loads the model and can be slow. Before demoing,
-open:
+The Modal deployment keeps one container warm for the demo:
+
+- `min_containers=1` keeps a GPU container alive instead of scaling to zero.
+- `max_containers=1` prevents a request burst from creating several containers
+  that each load their own Qwen copy.
+- `@modal.concurrent(max_inputs=1)` serializes requests through the warm model.
+- `scaledown_window=1800` gives extra idle time if the warm-container setting is
+  changed later.
+
+This costs more than scale-to-zero, but it avoids repeated model reloads during
+judging.
+
+The first request after deploy can still download/load the model. Before
+demoing, open:
 
 ```sh
 curl https://YOUR-ENDPOINT.modal.run/health
@@ -71,6 +83,9 @@ Wait until it returns:
 ```json
 {"status":"ok","model_loaded":true}
 ```
+
+After that, the warm container should keep serving without reloading unless the
+deployment is restarted or Modal has to replace the container.
 
 ## GPU choice
 
