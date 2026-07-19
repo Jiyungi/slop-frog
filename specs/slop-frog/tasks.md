@@ -69,7 +69,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** `.env.example` contains the current required variable names without secret values.
 
 - [ ] 3. Stabilize Modal detector
-  - [ ] 3.1 Deploy or redeploy Modal detector
+  - [x] 3.1 Deploy or redeploy Modal detector
     - Deploy `modal-detector/slop_frog_modal.py`.
     - Capture the real Modal app URL.
     - _Requirements: 4.1-4.5_
@@ -81,7 +81,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 4.6-4.8, 5.2_
     - **Verification:** Runtype `score_post` returns a detector-backed response instead of gray placeholder output.
 
-  - [ ] 3.3 Confirm model identity
+  - [x] 3.3 Confirm model identity
     - Confirm the running detector is using the intended Imbue/Qwen text detector path or compatible artifact.
     - Record `modelName` and `modelVersion` in responses.
     - _Requirements: 4.4-4.5_
@@ -312,7 +312,7 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 1.1-1.6_
     - **Verification:** `node --check` and existing verification script pass.
 
-  - [ ] 12.2 Run Modal health and score checks
+  - [x] 12.2 Run Modal health and score checks
     - Verify `/health` and `/score`.
     - _Requirements: 4.1-4.8_
     - **Verification:** Both endpoints return successful responses.
