@@ -611,7 +611,8 @@
 
     return el("div", { className: "slop-frog-chart-block" },
       el("span", {}, title),
-      svg
+      svg,
+      points.length ? "" : el("small", {}, "No history yet")
     );
   }
 

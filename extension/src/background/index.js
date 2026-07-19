@@ -347,39 +347,16 @@ function buildPanelResponse(post, scoreResponse, communityAggregate, settings) {
     settings
   );
 
-  const scoreHistory = makeScoreHistory(result);
-  const volumeHistory = makeVolumeHistory(result);
-
   return {
     ok: true,
     post,
     result,
     scoreResponse,
     communityAggregate,
-    scoreHistory,
-    volumeHistory,
+    scoreHistory: [],
+    volumeHistory: [],
     settings,
   };
-}
-
-function makeScoreHistory(result) {
-  const score = result.slopScore ?? result.detectorScore ?? null;
-  if (score === null) return [];
-  const now = Date.now();
-  return [3, 2, 1, 0].map((daysAgo, index) => ({
-    createdAt: new Date(now - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
-    slopScore: Math.max(0, Math.min(100, score - (3 - index) * 4)),
-    label: result.label,
-  }));
-}
-
-function makeVolumeHistory(result) {
-  const score = result.slopScore ?? result.detectorScore ?? null;
-  if (score === null) return [];
-  return [1, 4, 9, 16].map((volume, index) => ({
-    volume,
-    slopScore: Math.max(0, Math.min(100, score - (3 - index) * 3)),
-  }));
 }
 
 function remember(cacheKey, response) {

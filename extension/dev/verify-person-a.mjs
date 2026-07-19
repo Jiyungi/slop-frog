@@ -122,6 +122,21 @@ assert(
     sliceFunction(contentScript, "updatePanelCommunity").includes("renderSlopControls"),
   "community updates repaint the compact flag"
 );
+const backgroundScript = fs.readFileSync(
+  path.join(extensionRoot, "src/background/index.js"),
+  "utf8"
+);
+assert(
+  backgroundScript.includes("scoreHistory: []") &&
+    backgroundScript.includes("volumeHistory: []") &&
+    !backgroundScript.includes("function makeScoreHistory") &&
+    !backgroundScript.includes("function makeVolumeHistory"),
+  "background does not generate fake history points"
+);
+assert(
+  contentScript.includes("No history yet"),
+  "empty charts are labeled as no history"
+);
 assert(
   contentScript.includes("createPanelCloseButton") &&
     contentScript.includes('close.textContent = "×"'),
