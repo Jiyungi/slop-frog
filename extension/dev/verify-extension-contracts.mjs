@@ -187,7 +187,7 @@ assert(
 
 const fixture = fs.readFileSync(path.join(extensionRoot, "dev/x-feed-fixture.html"), "utf8");
 const fixturePosts = fixture.match(/data-testid="tweet"/g) || [];
-assert(fixturePosts.length === 3, "fixture includes three X-style posts");
+assert(fixturePosts.length >= 7, "fixture includes seven X-style post shapes");
 
 const popupHtml = fs.readFileSync(path.join(extensionRoot, "src/popup/popup.html"), "utf8");
 assert(!popupHtml.includes('id="detectorUrl"'), "popup hides developer detector URL");

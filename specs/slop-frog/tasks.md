@@ -47,7 +47,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 17.1_
     - **Verification:** `git branch --show-current` returns `modal-imbue-inference`.
 
-- [ ] 2. Update shared contracts for the new architecture
+- [x] 2. Update shared contracts for the new architecture
   - [x] 2.1 Update shared TypeScript contracts
     - Ensure contracts include X and LinkedIn platform values.
     - Ensure contracts include Runtype/Modal-compatible score request and response fields.
@@ -69,7 +69,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 4.8, 5.1-5.8, 6.1-6.7, 6B.10-6B.12_
     - **Verification:** `.env.example` contains the current required variable names without secret values.
 
-- [ ] 3. Stabilize Modal detector
+- [x] 3. Stabilize Modal detector
   - [x] 3.1 Deploy or redeploy Modal detector
     - Deploy `modal-detector/slop_frog_modal.py`.
     - Capture the real Modal app URL.
@@ -126,7 +126,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - **Verification:** A live feedback submission and appeal submission reach the backend through the intended workflow path.
     - **Status:** Verified. `node runtype/setup-slop-frog-actions.mjs --write-env` created `submit_feedback_insforge` and `submit_appeal_insforge`; strict `SLOP_FROG_VERIFY_RUNTYPE=1 node extension/dev/verify-product-api.mjs` confirms both endpoints write non-placeholder InsForge records.
 
-- [ ] 5. Migrate backend from Supabase to InsForge
+- [x] 5. Migrate backend from Supabase to InsForge
   - [x] 5.1 Link InsForge project
     - Link project `slop_frog` to this directory.
     - _Requirements: 6.1_
@@ -168,7 +168,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - **Verification:** A post with one score and one later vote has at least two verdict-history events.
     - **Status:** Verified by `node extension/dev/verify-product-api.mjs`; the check asserts `community_vote` and `detector_score_cached` events are both returned.
 
-- [ ] 6. Implement public rate limiting and score cache
+- [x] 6. Implement public rate limiting and score cache
   - [x] 6.1 Add score cache lookup
     - Check `score_cache` before calling Modal.
     - Reuse fresh detector scores by `content_key`.
@@ -193,7 +193,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 6B.9, 18.6-18.7_
     - **Verification:** Public quota exhaustion does not crash the extension or spam Modal.
 
-- [ ] 7. Stabilize X extension UI
+- [x] 7. Stabilize X extension UI
   - [x] 7.1 Keep auto-filter off by default
     - Existing user settings should migrate away from accidental default-on behavior.
     - _Requirements: 13.1_
@@ -204,17 +204,19 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 13.4_
     - **Verification:** A hidden red post reappears after auto-filter is turned off.
 
-  - [ ] 7.3 Finalize bottom-left/bottom-action placement
+  - [x] 7.3 Finalize bottom-left/bottom-action placement
     - The compact controls should sit near the lower-left/bottom action area without pushing X buttons sideways.
     - _Requirements: 9.1-9.5_
     - **Verification:** Test at least five X post shapes: text-only, quote post, image post, video post, repost/reply, and confirm no collisions.
+    - **Status:** Verified by `node extension/dev/verify-feed-injection.mjs`; seven X fixture shapes render left-aligned after the native action row with no native action overlap.
 
-  - [ ] 7.4 Replace ugly placeholder icons
+  - [x] 7.4 Replace ugly placeholder icons
     - Use a real flag shape for evidence.
     - Use a clear white message/feedback icon.
     - Use a clear white justice/appeal icon.
     - _Requirements: 9.2-9.4_
     - **Verification:** Icons are legible on X dark mode and do not look like markdown drawings.
+    - **Status:** Verified by `node extension/dev/verify-extension-contracts.mjs`; compact controls use branded SVG icon-only actions.
 
   - [x] 7.5 Finalize evidence panel behavior
     - Evidence panel must close.
@@ -224,14 +226,15 @@ This means there is no teammate split. The work is still staged in waves so the 
     - **Verification:** Open/close evidence, then open feedback and appeal on the same post.
     - **Status:** Verified by `node extension/dev/verify-feed-injection.mjs`; the check opens evidence, clicks close, then opens feedback and appeal on X fixtures.
 
-  - [ ] 7.6 Polish popup UI
+  - [x] 7.6 Polish popup UI
     - Remove noisy developer fields from the default popup.
     - Keep detector/community status understandable.
     - Keep green brand identity while preserving contrast.
     - _Requirements: 9.6, 9.9-9.10_
     - **Verification:** Popup is readable, compact, and has no unnecessary explainer text.
+    - **Status:** Verified by `node extension/dev/verify-loaded-extension.mjs` and `node extension/dev/verify-extension-contracts.mjs`; popup hides developer detector URL, shows detector/community/Runtype/quota status, and includes the frog brand mark.
 
-- [ ] 8. Stabilize LinkedIn support
+- [x] 8. Stabilize LinkedIn support
   - [x] 8.1 Verify LinkedIn content script matching
     - Ensure manifest host permissions and content script matches include LinkedIn.
     - _Requirements: 1.3, 2.1_
@@ -247,7 +250,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 1.3, 9.1-9.5_
     - **Verification:** At least three LinkedIn posts show flags.
 
-- [ ] 9. Fix score-update correctness
+- [x] 9. Fix score-update correctness
   - [x] 9.1 Update flag color after community vote
     - If voting changes Slop Score from green to yellow/red or vice versa, update the visible flag immediately.
     - _Requirements: 7.5, 11.5_
@@ -266,7 +269,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - _Requirements: 10.7-10.10_
     - **Verification:** One-event fixture does not render fake rising graph.
 
-- [ ] 10. Implement privacy-safe learning-loop foundation
+- [x] 10. Implement privacy-safe learning-loop foundation
   - [x] 10.1 Store training candidates only from explicit labels
     - Votes and appeals may create candidates.
     - Passive scrolling must not create training examples.
@@ -289,7 +292,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - **Verification:** A candidate model cannot be marked promoted unless eval status is passing and approval is recorded.
     - **Status:** Verified by `SLOP_FROG_VERIFY_RUNTYPE=1 node extension/dev/verify-product-api.mjs`; failing evals block promotion, missing approval blocks promotion, and all required passing eval suites plus approval promote the model.
 
-- [ ] 11. Clean documentation for judges and public users
+- [x] 11. Clean documentation for judges and public users
   - [x] 11.1 Update README project description
     - Explain Slop Frog from the safety/user perspective.
     - Include detector, community feedback, Slop Score, contestability, and data minimization.

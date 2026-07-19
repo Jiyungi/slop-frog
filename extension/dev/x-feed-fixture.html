@@ -67,10 +67,35 @@
 
       [role="group"] {
         display: flex;
+        justify-content: space-between;
         gap: 18px;
         margin-top: 12px;
         color: oklch(46% 0 0);
         font-size: 13px;
+      }
+
+      [role="group"] button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+
+      .quote-card,
+      .media-box {
+        margin-top: 12px;
+        border: 1px solid oklch(86% 0 0);
+        border-radius: 16px;
+        padding: 12px;
+        background: oklch(98% 0 0);
+      }
+
+      .media-box {
+        display: grid;
+        place-items: center;
+        min-height: 160px;
+        color: oklch(52% 0.06 154);
       }
     </style>
   </head>
@@ -92,7 +117,10 @@
           bike lane pilot passed 6-3 and starts on September 1.
         </div>
         <div role="group" aria-label="Post actions">
-          <span>Reply</span><span>Repost</span><span>Like</span>
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
         </div>
       </article>
 
@@ -109,7 +137,10 @@
           sector with transformative capabilities.
         </div>
         <div role="group" aria-label="Post actions">
-          <span>Reply</span><span>Repost</span><span>Like</span>
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
         </div>
       </article>
 
@@ -121,7 +152,93 @@
         </div>
         <div data-testid="tweetText" lang="en">same</div>
         <div role="group" aria-label="Post actions">
-          <span>Reply</span><span>Repost</span><span>Like</span>
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
+        </div>
+      </article>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <strong>Quote Analyst</strong>
+          <span>@quoteanalyst</span>
+          <a href="https://x.com/quoteanalyst/status/10004">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">
+          The important part is not the demo clip; it is whether the claim can be
+          checked against a primary source.
+        </div>
+        <div class="quote-card">
+          <strong>Embedded post</strong>
+          <p>We shipped a new model benchmark this morning.</p>
+        </div>
+        <div role="group" aria-label="Post actions">
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
+        </div>
+      </article>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <strong>Image Builder</strong>
+          <span>@imagebuilder</span>
+          <a href="https://x.com/imagebuilder/status/10005">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">
+          A quick screenshot from today's prototype session. The UI is rough, but
+          the workflow finally holds together.
+        </div>
+        <div class="media-box" aria-label="Image attachment">image attachment</div>
+        <div role="group" aria-label="Post actions">
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
+        </div>
+      </article>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <strong>Video Notes</strong>
+          <span>@videonotes</span>
+          <a href="https://x.com/videonotes/status/10006">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">
+          Here is the full talk clip. Watch the middle section where the speaker
+          explains the cost curve.
+        </div>
+        <div class="media-box" aria-label="Video attachment">video attachment</div>
+        <div role="group" aria-label="Post actions">
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
+        </div>
+      </article>
+
+      <article data-testid="tweet">
+        <div class="tweet-meta">
+          <span>Reposted</span>
+          <strong>Reply Chain</strong>
+          <span>@replychain</span>
+          <a href="https://x.com/replychain/status/10007">status</a>
+        </div>
+        <div data-testid="tweetText" lang="en">
+          Replying with the missing context: this was recorded before the
+          product launch, not after it.
+        </div>
+        <div class="quote-card">
+          <strong>Original post</strong>
+          <p>We made an all-go-away button for email.</p>
+        </div>
+        <div role="group" aria-label="Post actions">
+          <button data-testid="reply">Reply</button>
+          <button data-testid="retweet">Repost</button>
+          <button data-testid="like">Like</button>
+          <button data-testid="bookmark">Bookmark</button>
         </div>
       </article>
     </main>

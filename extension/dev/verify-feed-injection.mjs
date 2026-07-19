@@ -101,9 +101,10 @@ try {
       evidenceButtons: document.querySelectorAll('article .slop-frog-controls button[title="View Slop Score evidence"]').length,
       filtered: document.querySelectorAll("article.slop-frog-filtered").length
     })`,
-    (state) => state.controls === 3 && state.evidenceButtons === 3,
-    "three scored X controls"
+    (state) => state.controls === 7 && state.evidenceButtons === 7,
+    "seven scored X controls"
   );
+  const xPlacementState = await verifyXPlacement(xPage);
   await evaluate(
     xPage,
     `document.querySelector('.slop-frog-controls button[title="View Slop Score evidence"]').click()`
@@ -174,13 +175,13 @@ try {
   await evaluate(
     xPage,
     `document.querySelector("main").insertAdjacentHTML("beforeend",
-      '<article data-testid="tweet"><div role="group" aria-label="Post actions"><span>Reply</span></div></article>'
+      '<article data-testid="tweet"><div role="group" aria-label="Post actions"><button data-testid="reply">Reply</button></div></article>'
     )`
   );
   await waitForState(
     xPage,
     `document.querySelectorAll('article .slop-frog-controls').length`,
-    (count) => count === 4,
+    (count) => count === 8,
     "gray control on a malformed X post"
   );
   await evaluate(
@@ -197,7 +198,7 @@ try {
   const stableControlCount = await waitForState(
     xPage,
     `document.querySelectorAll('article .slop-frog-controls').length`,
-    (count) => count === 4,
+    (count) => count === 8,
     "stable X control count after scroll"
   );
 
@@ -218,6 +219,7 @@ try {
         extensionId: loaded.id,
         x: {
           ...xState,
+          placement: xPlacementState,
           evidenceState,
           closeState,
           feedbackState,
@@ -333,6 +335,47 @@ function resolveOpenSslBinary() {
   return "openssl";
 }
 
+async function verifyXPlacement(sessionId) {
+  return waitForState(
+    sessionId,
+    `JSON.stringify((() => {
+      const articles = Array.from(document.querySelectorAll('article')).filter((article) =>
+        article.querySelector('.slop-frog-controls')
+      );
+      const inspected = articles.map((article) => {
+        const controls = article.querySelector('.slop-frog-controls');
+        const actions = Array.from(article.querySelectorAll('[role="group"]')).find((group) =>
+          group.querySelector('[data-testid="reply"], [data-testid="retweet"], [data-testid="like"]')
+        );
+        const articleRect = article.getBoundingClientRect();
+        const controlsRect = controls.getBoundingClientRect();
+        const actionsRect = actions?.getBoundingClientRect();
+        const actionButtons = actions ? Array.from(actions.querySelectorAll('button')).map((button) => button.getBoundingClientRect()) : [];
+        const overlapsActionButton = actionButtons.some((buttonRect) =>
+          !(controlsRect.right <= buttonRect.left || controlsRect.left >= buttonRect.right || controlsRect.bottom <= buttonRect.top || controlsRect.top >= buttonRect.bottom)
+        );
+        return {
+          leftAligned: controlsRect.left <= articleRect.left + 28,
+          afterActions: actionsRect ? controlsRect.top >= actionsRect.bottom - 1 : true,
+          overlapsActionButton
+        };
+      });
+      return {
+        inspected: inspected.length,
+        leftAligned: inspected.every((item) => item.leftAligned),
+        afterActions: inspected.every((item) => item.afterActions),
+        noActionOverlap: inspected.every((item) => !item.overlapsActionButton)
+      };
+    })())`,
+    (state) =>
+      state.inspected >= 7 &&
+      state.leftAligned &&
+      state.afterActions &&
+      state.noActionOverlap,
+    "X bottom-left controls with no native action overlap"
+  );
+}
+
 async function openPage(url) {
   const page = await command("Target.createTarget", { url });
   return attach(page.targetId);
@@ -384,7 +427,7 @@ async function evaluate(sessionId, expression, awaitPromise = false) {
 }
 
 function withUniqueIds(html) {
-  return ["10001", "10002", "10003"].reduce(
+  return ["10001", "10002", "10003", "10004", "10005", "10006", "10007"].reduce(
     (nextHtml, id, index) => nextHtml.replaceAll(id, `${timestamp}${index + 1}`),
     html
   );
