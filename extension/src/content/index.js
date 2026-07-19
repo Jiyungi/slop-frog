@@ -26,7 +26,7 @@
     settings = await getSettings();
     if (stopped) return;
     scanVisiblePosts();
-    observer = new MutationObserver(queueScan);
+    observer = new MutationObserver(handleMutations);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -47,6 +47,26 @@
     if (stopped) return;
     window.clearTimeout(scanTimer);
     scanTimer = window.setTimeout(scanVisiblePosts, 180);
+  }
+
+  function handleMutations(mutations) {
+    if (stopped) return;
+    if (mutations.every(isOwnUiMutation)) return;
+    queueScan();
+  }
+
+  function isOwnUiMutation(mutation) {
+    if (isSlopFrogNode(mutation.target)) return true;
+    const nodes = [...mutation.addedNodes, ...mutation.removedNodes];
+    return nodes.length > 0 && nodes.every(isSlopFrogNode);
+  }
+
+  function isSlopFrogNode(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+    return Boolean(
+      node.matches?.(".slop-frog-slot, .slop-frog-panel, .slop-frog-filter-card") ||
+        node.closest?.(".slop-frog-slot, .slop-frog-panel, .slop-frog-filter-card")
+    );
   }
 
   function scanVisiblePosts() {
