@@ -1,6 +1,7 @@
 (function initSlopFrogContent() {
   const runtime = globalThis.SlopFrogRuntime;
   const processedArticles = new WeakMap();
+  const articleMounts = new WeakMap();
   const panelState = new WeakMap();
   let settings = { ...runtime.DEFAULT_EXTENSION_SETTINGS };
   let activeAdapter;
@@ -94,6 +95,9 @@
       },
       extract: extractLinkedInPost,
       findInsertionPoint(post) {
+        if (isLinkedInCommentContainer(post)) {
+          return findLinkedInCommentActionRow(post);
+        }
         return (
           post.querySelector(".feed-shared-social-action-bar") ||
           post.querySelector(".social-actions") ||
@@ -121,6 +125,24 @@
     '[data-test-id="main-feed-activity-card__commentary"]',
     '[data-test-id="feed-shared-update-v2__commentary"]',
     '[data-test-id*="commentary"]',
+    '[dir="ltr"]',
+  ];
+
+  const LINKEDIN_COMMENT_SELECTORS = [
+    ".comments-comment-item",
+    ".comments-comment-entity",
+    '[data-test-id="comments-comment-item"]',
+    '[data-test-id*="comments-comment"]',
+  ];
+
+  const LINKEDIN_COMMENT_TEXT_SELECTORS = [
+    ".comments-comment-item__main-content",
+    ".comments-comment-item-content-body",
+    ".comments-comment-entity__content",
+    ".comments-comment-item__inline-show-more-text",
+    ".comments-comment-text",
+    ".update-components-text",
+    ".break-words",
     '[dir="ltr"]',
   ];
 
@@ -233,6 +255,22 @@
   }
 
   function findLinkedInPosts(root) {
+    const comments = uniqueNodes([
+      ...Array.from(root.querySelectorAll(LINKEDIN_COMMENT_SELECTORS.join(", "))),
+      ...Array.from(root.querySelectorAll(LINKEDIN_COMMENT_TEXT_SELECTORS.join(", ")))
+        .map((node) => closestLinkedInCommentContainer(node))
+        .filter(Boolean),
+      ...Array.from(
+        root.querySelectorAll(
+          '.comments-comment-social-bar, .comments-comment-item__social-actions, button[aria-label*="Like"][aria-label*="comment"], button[aria-label*="Reply"]'
+        )
+      )
+        .map((node) => closestLinkedInCommentContainer(node))
+        .filter(Boolean),
+    ])
+      .map((node) => closestLinkedInCommentContainer(node))
+      .filter(Boolean);
+
     const direct = Array.from(
       root.querySelectorAll(
         [
@@ -246,10 +284,10 @@
           "[data-activity-urn]",
         ].join(", ")
       )
-    );
+    ).filter((node) => !closestLinkedInCommentContainer(node));
     const fromText = Array.from(root.querySelectorAll(LINKEDIN_TEXT_SELECTORS.join(", ")))
       .map((node) =>
-        closestLinkedInPostContainer(node)
+        closestLinkedInCommentContainer(node) || closestLinkedInPostContainer(node)
       )
       .filter(Boolean);
     const fromLinks = Array.from(
@@ -278,10 +316,22 @@
       .map((node) => closestLinkedInPostContainer(node))
       .filter(Boolean);
 
-    return uniqueTopLevel([...direct, ...fromText, ...fromLinks, ...fromActions].map(closestLinkedInPostContainer).filter(Boolean)).filter((post) => {
+    const feedPosts = uniqueTopLevel(
+      [...direct, ...fromText, ...fromLinks, ...fromActions]
+        .map((node) => closestLinkedInCommentContainer(node) || closestLinkedInPostContainer(node))
+        .filter(Boolean)
+        .filter((node) => !isLinkedInCommentContainer(node))
+    ).filter((post) => {
       const text = getLinkedInText(post);
       return text.length > 8 || imageUrlsFrom(post).length > 0;
     });
+
+    const commentPosts = uniqueNodes(comments).filter((comment) => {
+      const text = getLinkedInText(comment);
+      return text.length > 8 || imageUrlsFrom(comment).length > 0;
+    });
+
+    return [...feedPosts, ...commentPosts];
   }
 
   function closestLinkedInPostContainer(node) {
@@ -318,8 +368,32 @@
     return null;
   }
 
+  function closestLinkedInCommentContainer(node) {
+    const comment = node?.closest?.(LINKEDIN_COMMENT_SELECTORS.join(", "));
+    if (!comment || comment === document.body || comment.tagName === "MAIN") return null;
+    return comment;
+  }
+
+  function isLinkedInCommentContainer(node) {
+    return Boolean(node && closestLinkedInCommentContainer(node) === node);
+  }
+
+  function findLinkedInCommentActionRow(comment) {
+    return (
+      comment.querySelector(".comments-comment-social-bar") ||
+      comment.querySelector(".comments-comment-item__social-actions") ||
+      comment.querySelector(".comments-comment-item__social-counts") ||
+      comment.querySelector('button[aria-label*="Like"]')?.closest('[role="group"], .social-actions, div') ||
+      comment.querySelector('button[aria-label*="Reply"]')?.closest('[role="group"], .social-actions, div') ||
+      comment
+    );
+  }
+
   function getLinkedInText(post) {
-    const selectedText = getTextFromSelectors(post, LINKEDIN_TEXT_SELECTORS);
+    const selectedText = getTextFromSelectors(
+      post,
+      isLinkedInCommentContainer(post) ? LINKEDIN_COMMENT_TEXT_SELECTORS : LINKEDIN_TEXT_SELECTORS
+    );
     if (selectedText.length > 0) return cleanLinkedInText(selectedText);
     return cleanLinkedInText(post.innerText || post.textContent || "");
   }
@@ -375,6 +449,10 @@
     return list.filter(
       (node) => !list.some((other) => other !== node && other.contains(node))
     );
+  }
+
+  function uniqueNodes(nodes) {
+    return Array.from(new Set(nodes.filter(Boolean)));
   }
 
   function renderPending(article) {
@@ -500,11 +578,17 @@
   }
 
   function ensureMount(article) {
-    let mount = article.querySelector(":scope .slop-frog-controls");
+    let mount = articleMounts.get(article);
+    if (mount?.isConnected) return mount;
+    mount = article.querySelector(":scope > .slop-frog-slot > .slop-frog-controls");
     if (mount) return mount;
 
     const slot = document.createElement("div");
     slot.className = "slop-frog-slot";
+    slot.dataset.platform = activeAdapter?.platform || "";
+    if (activeAdapter?.platform === "linkedin" && isLinkedInCommentContainer(article)) {
+      slot.classList.add("is-linkedin-comment");
+    }
 
     mount = document.createElement("div");
     mount.className = "slop-frog-controls";
@@ -519,6 +603,7 @@
       article.append(slot);
     }
 
+    articleMounts.set(article, mount);
     return mount;
   }
 
@@ -1109,6 +1194,22 @@
       .slop-frog-slot .slop-frog-controls,
       .slop-frog-slot .slop-frog-panel {
         pointer-events: auto;
+      }
+
+      .slop-frog-slot.is-linkedin-comment {
+        margin-top: 4px !important;
+      }
+
+      .slop-frog-slot.is-linkedin-comment .slop-frog-controls {
+        gap: 5px;
+        transform: scale(0.86);
+        transform-origin: left center;
+      }
+
+      .slop-frog-slot.is-linkedin-comment .slop-frog-button {
+        box-shadow:
+          0 4px 10px color-mix(in oklch, black 18%, transparent),
+          inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
       }
 
       .slop-frog-button,

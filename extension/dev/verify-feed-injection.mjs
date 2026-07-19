@@ -208,10 +208,17 @@ try {
     `JSON.stringify({
       oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
       newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
-      controls: document.querySelectorAll('.feed-shared-update-v2 .slop-frog-controls, .fie-impression-container .slop-frog-controls').length
+      comments: document.querySelectorAll('.comments-comment-item').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls').length,
+      commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length
     })`,
-    (state) => state.oldCards === 3 && state.newCards === 1 && state.controls === 4,
-    "four LinkedIn cards with controls across old and current DOM shapes"
+    (state) =>
+      state.oldCards === 3 &&
+      state.newCards === 1 &&
+      state.comments === 2 &&
+      state.controls === 6 &&
+      state.commentControls === 2,
+    "LinkedIn feed posts and comments with controls across old and current DOM shapes"
   );
 
   console.log(
