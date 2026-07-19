@@ -1,4 +1,5 @@
 const detectorStatus = document.querySelector("#detectorStatus");
+const detectorUrl = document.querySelector("#detectorUrl");
 const supabaseStatus = document.querySelector("#supabaseStatus");
 const showNumericScore = document.querySelector("#showNumericScore");
 const autoFilterRed = document.querySelector("#autoFilterRed");
@@ -9,6 +10,7 @@ async function initPopup() {
   const status = await sendMessage({ type: "SLOP_FROG_GET_STATUS" });
   const settings = status.settings || globalThis.SlopFrogRuntime.DEFAULT_EXTENSION_SETTINGS;
 
+  detectorUrl.textContent = settings.localDetectorUrl;
   showNumericScore.checked = Boolean(settings.showNumericScore);
   autoFilterRed.checked = Boolean(settings.autoFilterRed);
 

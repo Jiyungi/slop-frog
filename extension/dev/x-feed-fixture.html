@@ -103,9 +103,10 @@
           <a href="https://x.com/growththreadlab/status/10002">status</a>
         </div>
         <div data-testid="tweetText" lang="en">
-          Unlock your limitless potential with these ten game-changing habits
-          that will transform your productivity, elevate your mindset, and help
-          you dominate every area of life. Number seven will surprise you.
+          In today's rapidly evolving digital landscape, it is crucial to leverage
+          cutting-edge artificial intelligence solutions to unlock unprecedented
+          productivity, streamline workflows, and empower individuals across every
+          sector with transformative capabilities.
         </div>
         <div role="group" aria-label="Post actions">
           <span>Reply</span><span>Repost</span><span>Like</span>
@@ -146,7 +147,7 @@
 
             if (message.type === "SLOP_FROG_SCORE_POST") {
               const text = message.post.normalizedText;
-              const red = text.includes("Unlock your limitless potential");
+              const red = text.includes("rapidly evolving digital landscape");
               const gray = text === "same";
               const score = red ? 86 : gray ? null : 18;
               callback({

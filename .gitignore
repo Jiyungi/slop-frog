@@ -1,0 +1,13 @@
+# Local credentials and Supabase CLI link state must not be committed.
+/.env
+/supabase/.temp/
+
+# Large local model artifacts are provisioned separately and must not be committed.
+/local-detector/models/
+/local-detector/.venv/
+/local-detector/**/__pycache__/
+
+# The unpacked extension reads this generated local-only configuration. It
+# contains a Supabase publishable key and demo reviewer identity, never a
+# server secret.
+/extension/src/shared/supabase-config.local.json

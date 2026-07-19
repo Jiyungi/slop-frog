@@ -1,0 +1,69 @@
+from contextlib import asynccontextmanager
+from threading import Lock
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from schemas import ErrorResponse, HealthResponse, ScoreRequest, ScoreResponse
+from scorer import LocalDetectorScorer
+
+SERVICE_NAME = "slop-frog-local-detector"
+SERVICE_VERSION = "0.1.0"
+
+scorer = LocalDetectorScorer()
+# Apple MPS inference is not re-entrant. Feed scans can discover several posts
+# in one mutation batch, so serialize the model calls instead of allowing a
+# concurrent Metal command buffer to fail the whole detector process.
+score_lock = Lock()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Initialize the local model once so score requests stay under demo latency."""
+
+    if scorer.load_model():
+        scorer.warmup()
+    yield
+
+
+app = FastAPI(
+    title="Slop Frog Local Detector", version=SERVICE_VERSION, lifespan=lifespan
+)
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(
+    _: Request, exception: RequestValidationError
+) -> JSONResponse:
+    """Return contract errors in a stable shape for the extension."""
+
+    response = ErrorResponse(
+        errorCode="invalid_request",
+        message="Request does not match the ScoreRequest contract.",
+        details=exception.errors(),
+    )
+    return JSONResponse(status_code=422, content=response.model_dump(mode="json"))
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    """Confirm that the localhost detector service is available."""
+
+    return HealthResponse(
+        service=SERVICE_NAME,
+        version=SERVICE_VERSION,
+        model_loaded=scorer.model_loaded,
+    )
+
+
+@app.post("/score", response_model=ScoreResponse | ErrorResponse)
+def score(request: ScoreRequest) -> ScoreResponse | JSONResponse:
+    """Return a gray result before model inference when evidence is too sparse."""
+
+    with score_lock:
+        result = scorer.score(request)
+    if isinstance(result, ErrorResponse):
+        status_code = 503 if result.errorCode == "model_unavailable" else 500
+        return JSONResponse(status_code=status_code, content=result.model_dump(mode="json"))
+    return result
