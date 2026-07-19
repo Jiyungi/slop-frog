@@ -112,6 +112,12 @@ assert(
   "evidence panel renders detector score row"
 );
 assert(
+  contentScript.includes("formatCommunityScore") &&
+    contentScript.includes('voteCount === 1 ? "vote" : "votes"') &&
+    !sliceFunction(contentScript, "createEvidencePanel").includes("community.voteCount}`"),
+  "community score displays a clear vote count"
+);
+assert(
   contentScript.includes("createPanelCloseButton") &&
     contentScript.includes('close.textContent = "×"'),
   "panels include a close button"

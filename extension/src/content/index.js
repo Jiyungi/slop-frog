@@ -467,12 +467,7 @@
       ),
       scoreRow("Slop Score", formatScore(result.slopScore)),
       scoreRow("Detector score", formatScore(result.detectorScore)),
-      scoreRow(
-        "Community",
-        community?.weightedAiScore === null || !community
-          ? "—"
-          : `${formatScore(community.weightedAiScore)} · ${community.voteCount}`
-      ),
+      scoreRow("Community", formatCommunityScore(community)),
       modalityRow("Text", modalityScores.text),
       modalityRow("Image", modalityScores.image),
       modalityRow("Audio", modalityScores.audio),
@@ -694,6 +689,13 @@
 
   function formatScore(value) {
     return value === null || value === undefined ? "—" : String(Math.round(value));
+  }
+
+  function formatCommunityScore(community) {
+    if (!community || community.weightedAiScore === null) return "—";
+    const voteCount = Number(community.voteCount || 0);
+    const voteLabel = voteCount === 1 ? "vote" : "votes";
+    return `${formatScore(community.weightedAiScore)} (${voteCount} ${voteLabel})`;
   }
 
   function formatReason(value) {
