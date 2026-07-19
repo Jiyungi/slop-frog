@@ -58,7 +58,6 @@ export interface ExtensionSettings {
   yellowThreshold: number;
   scoringApiUrl: string;
   modalDetectorUrl: string;
-  localDetectorUrl?: string;
   showNumericScore: boolean;
   autoFilterRed: boolean;
   publicQuota: number;

@@ -15,7 +15,6 @@ const runtime = globalThis.SlopFrogRuntime;
 const memoryCache = new Map();
 const PRODUCT_API_CONFIG_STORAGE_KEY = "slopFrog.productApiConfig";
 const PRODUCT_API_LOCAL_CONFIG_PATH = "src/shared/product-api-config.local.json";
-const LEGACY_SUPABASE_LOCAL_CONFIG_PATH = "src/shared/supabase-config.local.json";
 const AUTO_FILTER_OPT_IN_STORAGE_KEY = "slopFrog.autoFilterOptInDefault.v1";
 const SUPPORTED_PLATFORMS = new Set(["x", "linkedin"]);
 const DETECTOR_SCORE_TIMEOUT_MS = 20_000;
@@ -80,7 +79,6 @@ async function getStatus() {
     settings,
     detector,
     backend,
-    supabase: backend,
     runtype,
   };
 }
@@ -210,8 +208,7 @@ async function applyLocalRuntimeConfig(settings) {
     modalDetectorUrl:
       config.modalDetectorUrl ||
       settings.modalDetectorUrl ||
-      settings.localDetectorUrl ||
-      runtime.LOCAL_DETECTOR_URL,
+      "",
     publicQuota: Number(config.publicQuota || settings.publicQuota || 1),
     userTier:
       config.ownerReviewerId && config.ownerReviewerId === config.demoReviewerId
@@ -226,26 +223,9 @@ async function loadProductApiConfig() {
 
   try {
     const response = await fetch(chrome.runtime.getURL(PRODUCT_API_LOCAL_CONFIG_PATH));
-    if (!response.ok) return loadLegacyConfig(storedConfig);
+    if (!response.ok) return storedConfig;
     const localConfig = await response.json();
     return { ...localConfig, ...storedConfig };
-  } catch {
-    return loadLegacyConfig(storedConfig);
-  }
-}
-
-async function loadLegacyConfig(storedConfig) {
-  try {
-    const response = await fetch(chrome.runtime.getURL(LEGACY_SUPABASE_LOCAL_CONFIG_PATH));
-    if (!response.ok) return storedConfig;
-    const legacyConfig = await response.json();
-    return {
-      ...legacyConfig,
-      insforgeUrl: legacyConfig.insforgeUrl || legacyConfig.url,
-      insforgeAnonKey: legacyConfig.insforgeAnonKey || legacyConfig.publishableKey,
-      modalDetectorUrl: legacyConfig.modalDetectorUrl || legacyConfig.detectorUrl,
-      ...storedConfig,
-    };
   } catch {
     return storedConfig;
   }
@@ -264,8 +244,8 @@ async function fetchCommunityAggregateForPost(post) {
   }
 }
 
-async function fetchDetectorHealth(localDetectorUrl) {
-  if (!localDetectorUrl) {
+async function fetchDetectorHealth(detectorUrl) {
+  if (!detectorUrl) {
     return {
       ok: false,
       status: "offline",
@@ -277,11 +257,11 @@ async function fetchDetectorHealth(localDetectorUrl) {
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
-    detectorTimeoutMs(localDetectorUrl, "health")
+      detectorTimeoutMs(detectorUrl, "health")
   );
 
   try {
-    const response = await fetch(`${trimSlash(localDetectorUrl)}/health`, {
+    const response = await fetch(`${trimSlash(detectorUrl)}/health`, {
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -604,16 +584,11 @@ function supportedTabUrlPatterns() {
 }
 
 function trimSlash(value) {
-  return String(value || runtime.LOCAL_DETECTOR_URL).replace(/\/+$/, "");
+  return String(value || "").replace(/\/+$/, "");
 }
 
 function resolveDetectorUrl(settings, config = {}) {
-  return (
-    settings?.modalDetectorUrl ||
-    config?.modalDetectorUrl ||
-    settings?.localDetectorUrl ||
-    runtime.LOCAL_DETECTOR_URL
-  );
+  return trimSlash(config?.modalDetectorUrl || settings?.modalDetectorUrl || "");
 }
 
 function makeCachedScoreResponse(post, plan) {

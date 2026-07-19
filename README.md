@@ -140,7 +140,7 @@ Static/product checks:
 node --check extension/src/shared/product-api.mjs
 node --check extension/src/background/index.js
 node extension/dev/verify-product-api.mjs
-node extension/dev/verify-person-a.mjs
+node extension/dev/verify-extension-contracts.mjs
 ```
 
 Chrome extension load check:

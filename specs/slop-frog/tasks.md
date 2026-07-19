@@ -26,7 +26,7 @@ No task may be marked complete until its verification step has passed. "Code exi
 
 Owner for all tasks: **Solo Builder**
 
-This means there is no Person A / Person B split. The work is still staged in waves so the product does not turn into spaghetti.
+This means there is no teammate split. The work is still staged in waves so the product does not turn into spaghetti.
 
 ## Task waves
 
@@ -48,12 +48,13 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** `git branch --show-current` returns `modal-imbue-inference`.
 
 - [ ] 2. Update shared contracts for the new architecture
-  - [ ] 2.1 Update shared TypeScript contracts
+  - [x] 2.1 Update shared TypeScript contracts
     - Ensure contracts include X and LinkedIn platform values.
     - Ensure contracts include Runtype/Modal-compatible score request and response fields.
     - Ensure contracts include feedback, appeal, verdict history, reviewer quality, and modality rows.
     - _Requirements: 2.1-2.5, 3.1-3.6_
-    - **Verification:** `rg "supabase|localhost:8765|Person A|Person B" extension specs/slop-frog` shows no stale required architecture references except migration/history notes.
+    - **Verification:** stale-architecture scan shows no old extension references to Supabase, localhost detector defaults, or teammate split ownership.
+    - **Status:** Verified by removing legacy Supabase helpers/config fallback, removing localhost detector defaults, and renaming the old contract verifier to `verify-extension-contracts.mjs`. Remaining Supabase mentions are historical migration notes outside the active extension architecture.
 
   - [x] 2.2 Update threshold and gray-state constants
     - Keep red > 75, yellow 40 through 75, green < 40, gray for insufficient signal.

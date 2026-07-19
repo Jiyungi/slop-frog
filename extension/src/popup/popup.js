@@ -15,7 +15,7 @@ async function initPopup() {
   autoFilterRed.checked = Boolean(settings.autoFilterRed);
 
   setStatus(detectorStatus, status.detector);
-  setStatus(backendStatus, status.backend || status.supabase);
+  setStatus(backendStatus, status.backend);
   setStatus(runtypeStatus, status.runtype);
   quotaStatus.textContent =
     settings.userTier === "owner_admin"

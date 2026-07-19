@@ -19,7 +19,7 @@ the unpacked extension on X.
 Run:
 
 ```bash
-node extension/dev/verify-person-a.mjs
+node extension/dev/verify-extension-contracts.mjs
 ```
 
 The script checks manifest references, scoped permissions, Slop Score thresholds,

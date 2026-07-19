@@ -1,15 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 const envPath = path.join(repositoryRoot, ".env");
 const targetPath = path.join(
   repositoryRoot,
   "extension/src/shared/product-api-config.local.json"
-);
-const legacyTargetPath = path.join(
-  repositoryRoot,
-  "extension/src/shared/supabase-config.local.json"
 );
 const env = fs.existsSync(envPath) ? readEnv(envPath) : {};
 
@@ -22,7 +19,8 @@ const config = {
   insforgeAnonKey:
     envValue(env, "INSFORGE_ANON_KEY") ||
     envValue(env, "NEXT_PUBLIC_INSFORGE_ANON_KEY") ||
-    envValue(env, "PUBLIC_INSFORGE_ANON_KEY"),
+    envValue(env, "PUBLIC_INSFORGE_ANON_KEY") ||
+    readInsForgeAnonKeyFromCli(),
   modalDetectorUrl: envValue(env, "SLOP_FROG_MODAL_DETECTOR_URL"),
   demoReviewerId: requiredEnv(env, "SLOP_FROG_DEMO_REVIEWER_ID"),
   ownerReviewerId: envValue(env, "SLOP_FROG_OWNER_REVIEWER_ID") || envValue(env, "SLOP_FROG_DEMO_REVIEWER_ID"),
@@ -46,12 +44,6 @@ if (!config.insforgeAnonKey) {
 }
 
 writeJson(targetPath, config);
-writeJson(legacyTargetPath, {
-  ...config,
-  url: envValue(env, "SLOP_FROG_SUPABASE_URL"),
-  publishableKey: envValue(env, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
-  detectorUrl: config.modalDetectorUrl || envValue(env, "SLOP_FROG_DETECTOR_URL"),
-});
 
 console.log("Wrote local Slop Frog product API extension configuration.");
 
@@ -78,4 +70,19 @@ function requiredEnv(envValues, key) {
   const value = envValue(envValues, key);
   if (!value) throw new Error(`${key} is required in .env.`);
   return value;
+}
+
+function readInsForgeAnonKeyFromCli() {
+  try {
+    const output = execSync("npx @insforge/cli secrets get ANON_KEY", {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 30_000,
+    });
+    const match = output.match(/ANON_KEY\s*=\s*([^\s]+)/);
+    return match?.[1]?.trim() || "";
+  } catch {
+    return "";
+  }
 }

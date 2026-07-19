@@ -1,7 +1,5 @@
 import type { ExtensionSettings } from "./contracts";
 
-export const LOCAL_DETECTOR_URL = "http://localhost:8765";
-
 export const DEFAULT_SCORING_API_URL = "";
 
 export const DEFAULT_MODAL_DETECTOR_URL = "";
@@ -18,7 +16,6 @@ export const DEFAULT_EXTENSION_SETTINGS: ExtensionSettings = {
   yellowThreshold: DEFAULT_YELLOW_THRESHOLD,
   scoringApiUrl: DEFAULT_SCORING_API_URL,
   modalDetectorUrl: DEFAULT_MODAL_DETECTOR_URL,
-  localDetectorUrl: LOCAL_DETECTOR_URL,
   showNumericScore: false,
   autoFilterRed: false,
   publicQuota: 1,

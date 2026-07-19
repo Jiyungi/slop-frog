@@ -1,5 +1,4 @@
 (function initSlopFrogRuntime(globalScope) {
-  const LOCAL_DETECTOR_URL = "http://localhost:8765";
   const DEFAULT_SCORING_API_URL = "";
   const DEFAULT_MODAL_DETECTOR_URL = "";
   const DEFAULT_RED_THRESHOLD = 75;
@@ -16,7 +15,6 @@
     yellowThreshold: DEFAULT_YELLOW_THRESHOLD,
     scoringApiUrl: DEFAULT_SCORING_API_URL,
     modalDetectorUrl: DEFAULT_MODAL_DETECTOR_URL,
-    localDetectorUrl: LOCAL_DETECTOR_URL,
     showNumericScore: false,
     autoFilterRed: false,
     publicQuota: 1,
@@ -200,7 +198,6 @@
   }
 
   globalScope.SlopFrogRuntime = Object.freeze({
-    LOCAL_DETECTOR_URL,
     DEFAULT_SCORING_API_URL,
     DEFAULT_MODAL_DETECTOR_URL,
     DEFAULT_EXTENSION_SETTINGS,
