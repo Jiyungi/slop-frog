@@ -132,7 +132,7 @@ assert(
   contentScript.includes("function removeFilterCard") &&
     sliceFunction(contentScript, "renderSlopControls").includes("if (!shouldAutoFilter) removeFilterCard(article)") &&
     sliceFunction(contentScript, "renderFilterCard").includes("removeFilterCard(article)") &&
-    contentScript.includes("article.slop-frog-filtered {") &&
+    contentScript.includes(".slop-frog-filtered {") &&
     contentScript.includes("display: block !important;"),
   "auto-filter cleanup removes stale blockers and keeps hidden posts compact"
 );
@@ -148,6 +148,12 @@ assert(
     backgroundScript.includes("chrome.tabs.sendMessage") &&
     backgroundScript.includes('"SLOP_FROG_SETTINGS_CHANGED"'),
   "background broadcasts settings changes to content scripts"
+);
+assert(
+  backgroundScript.includes("AUTO_FILTER_OPT_IN_STORAGE_KEY") &&
+    backgroundScript.includes("autoFilterRed: false") &&
+    backgroundScript.includes("getMigratedSettings"),
+  "auto-filter defaults off even for upgraded demo installs"
 );
 assert(
   backgroundScript.includes("scoreHistory: []") &&

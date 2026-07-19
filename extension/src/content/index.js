@@ -401,7 +401,7 @@
 
     const payload = panelState.get(article);
     card.replaceChildren(
-      el("strong", {}, "Slop Frog hid this post"),
+      el("strong", {}, "Hidden"),
       el(
         "span",
         {},
@@ -409,7 +409,7 @@
           ? "Red flag"
           : `Red flag · ${payload.result.slopScore}`
       ),
-      button("Show post", () => {
+      button("Show", () => {
         article.dataset.slopFrogRevealed = "true";
         article.classList.remove("slop-frog-filtered");
         removeFilterCard(article);
@@ -1299,15 +1299,18 @@
         background: color-mix(in oklch, white 13%, transparent) !important;
       }
 
-      article.slop-frog-filtered > *:not(.slop-frog-filter-card) {
+      .slop-frog-filtered > *:not(.slop-frog-filter-card) {
         display: none !important;
       }
 
-      article.slop-frog-filtered {
+      .slop-frog-filtered {
         display: block !important;
         box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
         min-height: 0 !important;
-        padding: 10px 16px !important;
+        padding: 10px 12px !important;
       }
 
       .slop-frog-filter-card {
@@ -1317,8 +1320,13 @@
         justify-content: space-between;
         gap: 10px;
         box-sizing: border-box;
+        grid-column: 1 / -1 !important;
+        flex: 1 1 100%;
         width: 100%;
+        max-width: 100%;
         min-width: 0;
+        min-height: 48px;
+        height: auto;
         margin: 0 !important;
         padding: 11px 12px;
         border: 1px solid color-mix(in oklch, oklch(68% 0.22 31) 48%, transparent);
@@ -1331,6 +1339,7 @@
           0 16px 34px color-mix(in oklch, black 28%, transparent),
           inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
         font: 12px/1.25 var(--sf-font);
+        overflow: hidden;
       }
 
       .slop-frog-filter-card strong {

@@ -10,6 +10,7 @@ const runtime = globalThis.SlopFrogRuntime;
 const memoryCache = new Map();
 const SUPABASE_CONFIG_STORAGE_KEY = "slopFrog.supabaseConfig";
 const SUPABASE_LOCAL_CONFIG_PATH = "src/shared/supabase-config.local.json";
+const AUTO_FILTER_OPT_IN_STORAGE_KEY = "slopFrog.autoFilterOptInDefault.v1";
 const SUPPORTED_PLATFORMS = new Set(["x", "linkedin"]);
 const DETECTOR_SCORE_TIMEOUT_MS = 20_000;
 let supabaseConfigPromise;
@@ -144,7 +145,20 @@ async function getSupabaseConfig() {
 }
 
 async function getEffectiveSettings() {
-  return applyLocalRuntimeConfig(await runtime.getSettings());
+  return applyLocalRuntimeConfig(await getMigratedSettings());
+}
+
+async function getMigratedSettings() {
+  const settings = await runtime.getSettings();
+  const marker = await runtime.chromeGet(AUTO_FILTER_OPT_IN_STORAGE_KEY);
+  if (marker[AUTO_FILTER_OPT_IN_STORAGE_KEY]) return settings;
+
+  const migratedSettings = await runtime.saveSettings({
+    ...settings,
+    autoFilterRed: false,
+  });
+  await runtime.chromeSet({ [AUTO_FILTER_OPT_IN_STORAGE_KEY]: true });
+  return migratedSettings;
 }
 
 async function applyLocalRuntimeConfig(settings) {
