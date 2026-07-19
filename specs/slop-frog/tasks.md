@@ -282,10 +282,11 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 16.1-16.4_
     - **Verification:** Running the workflow on fixtures produces a batch metadata record, not a full training job.
 
-  - [ ] 10.4 Add eval-gated promotion design
+  - [x] 10.4 Add eval-gated promotion design
     - Runtype `evaluate_new_detector` should record eval results before model promotion.
     - _Requirements: 16.4-16.7_
     - **Verification:** A candidate model cannot be marked promoted unless eval status is passing and approval is recorded.
+    - **Status:** Verified by `SLOP_FROG_VERIFY_RUNTYPE=1 node extension/dev/verify-product-api.mjs`; failing evals block promotion, missing approval blocks promotion, and all required passing eval suites plus approval promote the model.
 
 - [ ] 11. Clean documentation for judges and public users
   - [x] 11.1 Update README project description

@@ -5,6 +5,8 @@ import {
   fetchVerdictHistory,
   listPublicBenchmarkExamples,
   prepareBenchmarkBatch,
+  promoteModelVersion,
+  recordModelEvalResult,
   recordScoreCache,
   resolveScorePlan,
   submitAppeal,
@@ -55,7 +57,7 @@ if (config.runtypeScorePostUrl) {
     );
   } catch (error) {
     if (envValue("SLOP_FROG_VERIFY_RUNTYPE") === "1") throw error;
-    console.log(`○ Runtype detector-backed score skipped: ${error.message}`);
+    console.log(`- Runtype detector-backed score skipped: ${error.message}`);
   }
 }
 
@@ -124,6 +126,56 @@ assert(batch.inserted_examples >= 1, "benchmark batch creates public examples");
 const examples = await listPublicBenchmarkExamples(config, { limit: 5 });
 assert(examples.some((example) => example.source_platform === "x"), "public benchmark examples include X examples");
 
+const modelName = "slop-frog-verifier-detector";
+const blockedVersion = `blocked-${stamp}`;
+await recordModelEvalResult(config, {
+  modelName,
+  modelVersion: blockedVersion,
+  evalSuite: "scoring_workflow",
+  status: "failing",
+  metrics: { accuracy: 0.1 },
+});
+await assertRejects(
+  () =>
+    promoteModelVersion(config, {
+      modelName,
+      modelVersion: blockedVersion,
+      approvalId: `approval-${stamp}`,
+      promotedBy: "verifier",
+    }),
+  "evals_not_passing",
+  "failing eval blocks model promotion"
+);
+
+const passingVersion = `passing-${stamp}`;
+for (const evalSuite of ["scoring_workflow", "detector_regression", "privacy_cleaning"]) {
+  await recordModelEvalResult(config, {
+    modelName,
+    modelVersion: passingVersion,
+    evalSuite,
+    status: "passing",
+    metrics: { pass: true },
+  });
+}
+await assertRejects(
+  () =>
+    promoteModelVersion(config, {
+      modelName,
+      modelVersion: passingVersion,
+      approvalId: "",
+      promotedBy: "verifier",
+    }),
+  "human_approval_required",
+  "human approval is required before promotion"
+);
+const promoted = await promoteModelVersion(config, {
+  modelName,
+  modelVersion: passingVersion,
+  approvalId: `approval-${stamp}`,
+  promotedBy: "verifier",
+});
+assert(promoted.promoted === true, "passing evals plus approval promote model version");
+
 console.log("Product API verification passed");
 
 function vote(voteValue, suffix) {
@@ -164,5 +216,18 @@ function required(key) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
-  console.log(`✓ ${message}`);
+  console.log(`OK ${message}`);
+}
+
+async function assertRejects(fn, expectedMessage, message) {
+  try {
+    await fn();
+  } catch (error) {
+    if (String(error?.message || "").includes(expectedMessage)) {
+      console.log(`OK ${message}`);
+      return;
+    }
+    throw error;
+  }
+  throw new Error(message);
 }

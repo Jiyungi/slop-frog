@@ -173,6 +173,28 @@ export async function listPublicBenchmarkExamples(config, options = {}, fetchImp
   }, fetchImpl);
 }
 
+export async function recordModelEvalResult(config, payload, fetchImpl = globalThis.fetch) {
+  const rows = await callInsForgeRpc(config, "record_model_eval_result", {
+    p_model_name: payload.modelName,
+    p_model_version: payload.modelVersion,
+    p_eval_suite: payload.evalSuite,
+    p_status: payload.status,
+    p_metrics: payload.metrics || {},
+    p_modal_endpoint: payload.modalEndpoint || null,
+  }, fetchImpl);
+  return rows?.[0] || null;
+}
+
+export async function promoteModelVersion(config, payload, fetchImpl = globalThis.fetch) {
+  const rows = await callInsForgeRpc(config, "promote_model_version", {
+    p_model_name: payload.modelName,
+    p_model_version: payload.modelVersion,
+    p_approval_id: payload.approvalId,
+    p_promoted_by: payload.promotedBy || null,
+  }, fetchImpl);
+  return rows?.[0] || null;
+}
+
 export async function callInsForgeRpc(config, functionName, payload, fetchImpl = globalThis.fetch) {
   if (!isInsForgeConfigured(config)) {
     throw new Error("InsForge is not configured for this extension.");
