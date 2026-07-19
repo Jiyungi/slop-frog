@@ -15,6 +15,13 @@ const config = {
   demoReviewerId: requiredEnv(env, "SLOP_FROG_DEMO_REVIEWER_ID"),
 };
 
+const detectorUrl =
+  process.env.SLOP_FROG_MODAL_DETECTOR_URL ||
+  process.env.SLOP_FROG_DETECTOR_URL ||
+  env.SLOP_FROG_MODAL_DETECTOR_URL ||
+  env.SLOP_FROG_DETECTOR_URL;
+if (detectorUrl) config.detectorUrl = detectorUrl;
+
 fs.writeFileSync(targetPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 console.log("Wrote local Supabase extension configuration.");
 
@@ -28,6 +35,7 @@ function readEnv(filePath) {
 }
 
 function requiredEnv(envValues, key) {
-  if (!envValues[key]) throw new Error(`${key} is required in .env.`);
-  return envValues[key];
+  const value = process.env[key] || envValues[key];
+  if (!value) throw new Error(`${key} is required in .env.`);
+  return value;
 }

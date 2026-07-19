@@ -10,6 +10,7 @@
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
     "http://localhost:8765/*",
+    "https://*.modal.run/*",
     "https://*.supabase.co/*"
   ],
   "background": {

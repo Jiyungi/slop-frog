@@ -15,7 +15,7 @@ const DETECTOR_SCORE_TIMEOUT_MS = 20_000;
 let supabaseConfigPromise;
 
 chrome.runtime.onInstalled.addListener(async () => {
-  const settings = await runtime.getSettings();
+  const settings = await getEffectiveSettings();
   await runtime.saveSettings(settings);
 });
 
@@ -34,12 +34,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 async function routeMessage(message) {
   switch (message?.type) {
     case "SLOP_FROG_GET_SETTINGS":
-      return { ok: true, settings: await runtime.getSettings() };
-    case "SLOP_FROG_SAVE_SETTINGS":
+      return { ok: true, settings: await getEffectiveSettings() };
+    case "SLOP_FROG_SAVE_SETTINGS": {
+      const current = await runtime.getSettings();
+      const saved = await runtime.saveSettings({ ...current, ...(message.settings || {}) });
       return {
         ok: true,
-        settings: await runtime.saveSettings(message.settings),
+        settings: await applyLocalRuntimeConfig(saved),
       };
+    }
     case "SLOP_FROG_GET_STATUS":
       return getStatus();
     case "SLOP_FROG_SCORE_POST":
@@ -54,7 +57,7 @@ async function routeMessage(message) {
 }
 
 async function getStatus() {
-  const settings = await runtime.getSettings();
+  const settings = await getEffectiveSettings();
   const [detector, supabase] = await Promise.all([
     fetchDetectorHealth(settings.localDetectorUrl),
     getSupabaseStatus(),
@@ -69,7 +72,7 @@ async function getStatus() {
 }
 
 async function scorePost(post) {
-  const settings = await runtime.getSettings();
+  const settings = await getEffectiveSettings();
   const cacheKey = post?.contentKey;
 
   if (!cacheKey || !SUPPORTED_PLATFORMS.has(post?.platform)) {
@@ -138,6 +141,20 @@ async function getSupabaseConfig() {
   return supabaseConfigPromise;
 }
 
+async function getEffectiveSettings() {
+  return applyLocalRuntimeConfig(await runtime.getSettings());
+}
+
+async function applyLocalRuntimeConfig(settings) {
+  const config = await getSupabaseConfig();
+  const detectorUrl = config.detectorUrl || config.localDetectorUrl;
+  if (!detectorUrl) return settings;
+  return {
+    ...settings,
+    localDetectorUrl: detectorUrl,
+  };
+}
+
 async function loadSupabaseConfig() {
   const stored = await runtime.chromeGet(SUPABASE_CONFIG_STORAGE_KEY);
   const storedConfig = stored[SUPABASE_CONFIG_STORAGE_KEY] || {};
@@ -167,7 +184,10 @@ async function fetchCommunityAggregateForPost(post) {
 
 async function fetchDetectorHealth(localDetectorUrl) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 1600);
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    detectorTimeoutMs(localDetectorUrl, "health")
+  );
 
   try {
     const response = await fetch(`${trimSlash(localDetectorUrl)}/health`, {
@@ -209,7 +229,10 @@ async function fetchDetectorHealth(localDetectorUrl) {
 
 async function callLocalDetector(post, settings) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DETECTOR_SCORE_TIMEOUT_MS);
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    detectorTimeoutMs(settings.localDetectorUrl, "score")
+  );
 
   try {
     const response = await fetch(`${trimSlash(settings.localDetectorUrl)}/score`, {
@@ -369,4 +392,23 @@ function remember(cacheKey, response) {
 
 function trimSlash(value) {
   return String(value || runtime.LOCAL_DETECTOR_URL).replace(/\/+$/, "");
+}
+
+function detectorTimeoutMs(detectorUrl, purpose) {
+  const host = safeHost(detectorUrl);
+  const isLocal =
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "";
+  if (isLocal) return purpose === "health" ? 1600 : DETECTOR_SCORE_TIMEOUT_MS;
+  return purpose === "health" ? 90_000 : 140_000;
+}
+
+function safeHost(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
 }
