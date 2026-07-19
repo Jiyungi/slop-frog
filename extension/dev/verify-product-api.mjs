@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   fetchCommunityAggregate,
+  fetchVerdictHistory,
   listPublicBenchmarkExamples,
   prepareBenchmarkBatch,
   recordScoreCache,
@@ -110,6 +111,11 @@ const cachedPlan = await resolveScorePlan(config, {
 });
 assert(cachedPlan.decision === "cache_hit", "score cache avoids live detector call");
 assert(Number(cachedPlan.cached_detector_score) === 91, "score cache returns detector score");
+
+const history = await fetchVerdictHistory(config, contentKey);
+assert(history.length >= 2, "verdict history includes multiple score-changing events");
+assert(history.some((event) => event.eventType === "community_vote"), "verdict history records community votes");
+assert(history.some((event) => event.eventType === "detector_score_cached"), "verdict history records detector cache writes");
 
 const batch = await prepareBenchmarkBatch(config, { limit: 10, minVotes: 1 });
 assert(batch.inserted_examples >= 1, "benchmark batch creates public examples");

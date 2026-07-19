@@ -170,6 +170,7 @@ export interface VerdictHistoryPoint {
   createdAt: string;
   slopScore: number | null;
   label: FlagLabel;
+  eventType?: string;
 }
 
 export interface VolumeScorePoint {

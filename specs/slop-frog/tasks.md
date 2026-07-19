@@ -157,11 +157,12 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 12.1-12.5_
     - **Verification:** An appeal from the extension creates a backend appeal record.
 
-  - [ ] 5.6 Implement verdict history writes and reads
+  - [x] 5.6 Implement verdict history writes and reads
     - Store detector score, community score, Slop Score, label, reason, and event type.
     - Read history for the evidence graph.
     - _Requirements: 10.7-10.10, 12.5_
     - **Verification:** A post with one score and one later vote has at least two verdict-history events.
+    - **Status:** Verified by `node extension/dev/verify-product-api.mjs`; the check asserts `community_vote` and `detector_score_cached` events are both returned.
 
 - [ ] 6. Implement public rate limiting and score cache
   - [x] 6.1 Add score cache lookup

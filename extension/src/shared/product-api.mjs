@@ -126,6 +126,7 @@ export async function fetchVerdictHistory(config, contentKey, fetchImpl = global
     createdAt: row.created_at,
     slopScore: row.slop_score === null || row.slop_score === undefined ? null : Number(row.slop_score),
     label: row.label || "gray",
+    eventType: row.event_type || "unknown",
     volume: index + 1,
   }));
 }
