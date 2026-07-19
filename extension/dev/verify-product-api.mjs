@@ -8,6 +8,7 @@ import {
   resolveScorePlan,
   submitAppeal,
   submitCommunityVote,
+  scorePostViaRuntype,
 } from "../src/shared/product-api.mjs";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
@@ -15,6 +16,8 @@ const env = readEnv(path.join(repositoryRoot, ".env"));
 const stamp = Date.now();
 const contentKey = `x:js-api-${stamp}`;
 const config = {
+  runtypeScorePostUrl: envValue("RUNTYPE_SCORE_POST_URL"),
+  runtypeProductApiKey: envValue("RUNTYPE_PRODUCT_API_KEY"),
   insforgeUrl: required("INSFORGE_BACKEND_URL"),
   insforgeAnonKey:
     envValue("INSFORGE_ANON_KEY") ||
@@ -23,6 +26,35 @@ const config = {
     required("INSFORGE_SERVICE_KEY"),
   demoReviewerId: envValue("SLOP_FROG_DEMO_REVIEWER_ID") || "demo-reviewer-local",
 };
+
+if (config.runtypeScorePostUrl) {
+  const post = {
+    platform: "x",
+    contentKey: `x:js-runtype-${stamp}`,
+    normalizedText:
+      "This synthetic social media post uses generic polished language about revolutionary AI workflows and scalable autonomous agents. It is long enough to test the deployed detector response through Runtype.",
+    visibleText:
+      "This synthetic social media post uses generic polished language about revolutionary AI workflows and scalable autonomous agents. It is long enough to test the deployed detector response through Runtype.",
+  };
+  try {
+    const runtypeScore = await scorePostViaRuntype(config, {
+      post,
+      platform: post.platform,
+      contentHash: post.contentKey,
+      postText: post.normalizedText,
+      settings: { evidenceCoverageMinimum: 50, redThreshold: 75, yellowThreshold: 40 },
+    });
+    assert(runtypeScore.scoreResponse.detectorScore !== null, "Runtype returns detector-backed score");
+    assert(
+      runtypeScore.scoreResponse.modelName.includes("imbue") ||
+        runtypeScore.scoreResponse.modelName.includes("runtype"),
+      "Runtype score response includes model identity"
+    );
+  } catch (error) {
+    if (envValue("SLOP_FROG_VERIFY_RUNTYPE") === "1") throw error;
+    console.log(`○ Runtype detector-backed score skipped: ${error.message}`);
+  }
+}
 
 await submitCommunityVote(config, vote("looks_ai", "ai"));
 await submitCommunityVote(config, vote("looks_human", "human"));

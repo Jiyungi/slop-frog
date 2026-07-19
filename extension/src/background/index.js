@@ -319,6 +319,10 @@ async function scorePostThroughProductPath(post, settings, config, subjectKey) {
     try {
       const scored = await scorePostViaRuntype(config, {
         post,
+        platform: post.platform,
+        postUrl: post.url,
+        contentHash: post.contentKey,
+        postText: post.normalizedText || post.visibleText || "",
         settings: {
           evidenceCoverageMinimum: settings.evidenceCoverageMinimum,
           redThreshold: settings.redThreshold,

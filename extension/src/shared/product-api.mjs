@@ -219,15 +219,35 @@ function productHeaders(config, target) {
 }
 
 function normalizeScoreEnvelope(body, post) {
-  const direct = body?.scoreResponse || body?.result?.scoreResponse || body?.detector || body;
+  const verdict = body?.slop_verdict || body?.result?.slop_verdict || null;
+  if (
+    body &&
+    Object.prototype.hasOwnProperty.call(body, "slop_verdict") &&
+    body.slop_verdict === null
+  ) {
+    throw new Error("Runtype score returned an empty slop_verdict.");
+  }
+
+  const direct = body?.scoreResponse || body?.result?.scoreResponse || body?.detector || verdict || body;
   const result = body?.result || body?.slopScoreResult || null;
+  const detectorScore = numberOrNull(
+    direct?.detectorScore ??
+      direct?.detector_score ??
+      direct?.slopScore ??
+      direct?.slop_score ??
+      direct?.score
+  );
+
+  if (detectorScore === null && !direct?.errorCode && !direct?.error_code) {
+    throw new Error("Runtype score response did not include a detector score.");
+  }
 
   return {
     scoreResponse: {
       ...direct,
       ok: direct?.ok !== false,
       contentKey: direct?.contentKey || post?.contentKey,
-      detectorScore: numberOrNull(direct?.detectorScore ?? direct?.detector_score),
+      detectorScore,
       evidenceCoverage: Number(direct?.evidenceCoverage ?? direct?.evidence_coverage ?? 0),
       labelRecommendation: direct?.labelRecommendation || direct?.label || result?.label || "gray",
       reasons: direct?.reasons || direct?.reasonCodes || [],
