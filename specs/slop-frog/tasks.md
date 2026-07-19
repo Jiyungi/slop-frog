@@ -215,12 +215,13 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - _Requirements: 9.2-9.4_
     - **Verification:** Icons are legible on X dark mode and do not look like markdown drawings.
 
-  - [ ] 7.5 Finalize evidence panel behavior
+  - [x] 7.5 Finalize evidence panel behavior
     - Evidence panel must close.
     - Opening evidence must not permanently block feedback or appeal actions.
     - Graphs must use real data or honest single-point/flat states.
     - _Requirements: 9.7-9.8, 10.1-10.10_
     - **Verification:** Open/close evidence, then open feedback and appeal on the same post.
+    - **Status:** Verified by `node extension/dev/verify-feed-injection.mjs`; the check opens evidence, clicks close, then opens feedback and appeal on X fixtures.
 
   - [ ] 7.6 Polish popup UI
     - Remove noisy developer fields from the default popup.
@@ -246,15 +247,17 @@ This means there is no Person A / Person B split. The work is still staged in wa
     - **Verification:** At least three LinkedIn posts show flags.
 
 - [ ] 9. Fix score-update correctness
-  - [ ] 9.1 Update flag color after community vote
+  - [x] 9.1 Update flag color after community vote
     - If voting changes Slop Score from green to yellow/red or vice versa, update the visible flag immediately.
     - _Requirements: 7.5, 11.5_
     - **Verification:** Fixture or live vote changes visible flag color without page refresh.
+    - **Status:** Verified by `node extension/dev/verify-feed-injection.mjs`; a red X fixture changes to yellow after a `looks_human` vote.
 
-  - [ ] 9.2 Fix community score formatting
+  - [x] 9.2 Fix community score formatting
     - Remove stray `.0` or formatting artifacts.
     - _Requirements: 11.6_
     - **Verification:** Community score renders as a clean integer/label in evidence panel.
+    - **Status:** Verified by `node extension/dev/verify-feed-injection.mjs`; evidence renders `0 (1 vote)` and rejects stray `.0` formatting.
 
   - [x] 9.3 Make graphs honest
     - If only one verdict-history event exists, show a flat/single-point state.

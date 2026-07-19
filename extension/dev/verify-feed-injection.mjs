@@ -122,6 +122,16 @@ try {
   );
   await evaluate(
     xPage,
+    `document.querySelector('.slop-frog-panel[data-kind="evidence"] .slop-frog-close').click()`
+  );
+  const closeState = await waitForState(
+    xPage,
+    `document.querySelector('.slop-frog-panel[data-kind="evidence"]') === null`,
+    (closed) => closed === true,
+    "evidence panel close button"
+  );
+  await evaluate(
+    xPage,
     `document.querySelector('.slop-frog-controls button[title="Add feedback"]').click()`
   );
   await waitForState(
@@ -160,6 +170,7 @@ try {
     (text) => text.includes("Appeal sent"),
     "saved X appeal"
   );
+  const recolorState = await verifyFlagRecolorsAfterVote(xPage);
   await evaluate(
     xPage,
     `document.querySelector("main").insertAdjacentHTML("beforeend",
@@ -208,11 +219,13 @@ try {
         x: {
           ...xState,
           evidenceState,
+          closeState,
           feedbackState,
-          appealState,
-          malformedState,
-          stableControlCount,
-        },
+        appealState,
+          recolorState,
+        malformedState,
+        stableControlCount,
+      },
         linkedIn: linkedInState,
       },
       null,
@@ -254,6 +267,53 @@ function createCertificate() {
   if (result.status !== 0) {
     throw new Error("Could not create the temporary HTTPS certificate for feed testing.");
   }
+}
+
+async function verifyFlagRecolorsAfterVote(sessionId) {
+  await evaluate(
+    sessionId,
+    `document.querySelectorAll('article')[1]?.querySelector('.slop-frog-filter-card button')?.click?.()`
+  );
+  const before = await waitForState(
+    sessionId,
+    `document.querySelectorAll('article')[1]?.querySelector('.slop-frog-button.is-evidence')?.className || ""`,
+    (className) => className.includes("is-red"),
+    "red fixture starts red before community correction"
+  );
+  await evaluate(
+    sessionId,
+    `document.querySelectorAll('article')[1].querySelector('.slop-frog-button.is-feedback').click()`
+  );
+  await waitForState(
+    sessionId,
+    `JSON.stringify({ text: document.querySelectorAll('article')[1].querySelector('.slop-frog-panel[data-kind="feedback"]')?.innerText || "" })`,
+    (state) => state.text.includes("Looks human"),
+    "red fixture feedback panel"
+  );
+  await evaluate(
+    sessionId,
+    `Array.from(document.querySelectorAll('article')[1].querySelectorAll('.slop-frog-panel[data-kind="feedback"] button')).find((button) => button.textContent === "Looks human").click()`
+  );
+  const after = await waitForState(
+    sessionId,
+    `document.querySelectorAll('article')[1]?.querySelector('.slop-frog-button.is-evidence')?.className || ""`,
+    (className) => className.includes("is-yellow"),
+    "red fixture changes to yellow after human vote"
+  );
+  await evaluate(
+    sessionId,
+    `document.querySelectorAll('article')[1].querySelector('.slop-frog-button.is-evidence').click()`
+  );
+  const evidenceText = await waitForState(
+    sessionId,
+    `document.querySelectorAll('article')[1].querySelector('.slop-frog-panel[data-kind="evidence"]')?.innerText || ""`,
+    (text) => text.includes("Community") && /Community\s+0 \(1 vote\)/.test(text),
+    "clean community score formatting after vote"
+  );
+  if (/\\.0\\b/.test(evidenceText)) {
+    throw new Error(`Community score contains a stray decimal: ${evidenceText}`);
+  }
+  return { before, after, community: "0 (1 vote)" };
 }
 
 function resolveOpenSslBinary() {

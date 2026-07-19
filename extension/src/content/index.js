@@ -731,10 +731,11 @@
   }
 
   function formatCommunityScore(community) {
-    if (!community || community.weightedAiScore === null) return "—";
+    const communityScore = community?.weightedAiScore ?? community?.communityScore;
+    if (!community || communityScore === null || communityScore === undefined) return "—";
     const voteCount = Number(community.voteCount || 0);
     const voteLabel = voteCount === 1 ? "vote" : "votes";
-    return `${formatScore(community.weightedAiScore)} (${voteCount} ${voteLabel})`;
+    return `${formatScore(communityScore)} (${voteCount} ${voteLabel})`;
   }
 
   function formatReason(value) {
