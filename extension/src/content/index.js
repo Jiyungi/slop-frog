@@ -124,6 +124,7 @@
           renderScored(article, makeLocalGrayResponse(article, "extension_unavailable"));
         });
     }
+    cleanupInjectedLinkedInSlots();
     publishDebugSnapshot();
   }
 
@@ -197,6 +198,28 @@
     '[data-test-id="comments-comment-item"]',
     '[data-test-id*="comments-comment"]',
     '[data-test-id*="comments-reply"]',
+  ];
+  const LINKEDIN_POST_SELECTORS = [
+    ".feed-shared-update-v2",
+    ".occludable-update",
+    ".fie-impression-container",
+    '[data-view-name="feed-full-update"]',
+    '[data-view-name="profile-component-entity"]',
+    '[data-urn*="urn:li:activity"]',
+    '[data-id*="urn:li:activity"]',
+    "[data-activity-urn]",
+    "article",
+  ];
+  const LINKEDIN_NON_CONTENT_SELECTORS = [
+    "nav",
+    "footer",
+    "aside",
+    ".global-footer",
+    ".scaffold-layout__aside",
+    ".scaffold-layout__sidebar",
+    ".feed-shared-right-rail",
+    ".right-rail",
+    ".ad-banner-container",
   ];
 
   const LINKEDIN_COMMENT_TEXT_SELECTORS = [
@@ -594,19 +617,7 @@
       return false;
     }
     if (
-      node.closest(
-        [
-          "nav",
-          "footer",
-          "aside",
-          ".global-footer",
-          ".scaffold-layout__aside",
-          ".scaffold-layout__sidebar",
-          ".feed-shared-right-rail",
-          ".right-rail",
-          ".ad-banner-container",
-        ].join(", ")
-      )
+      node.closest(LINKEDIN_NON_CONTENT_SELECTORS.join(", "))
     ) {
       return false;
     }
@@ -748,6 +759,43 @@
     for (const [contentKey, owner] of contentKeyOwners.entries()) {
       if (!owner?.isConnected) contentKeyOwners.delete(contentKey);
     }
+  }
+
+  function cleanupInjectedLinkedInSlots() {
+    if (activeAdapter?.platform !== "linkedin") return;
+    const slots = Array.from(document.querySelectorAll(".slop-frog-slot"));
+    const ownerSlots = new Map();
+
+    for (const slot of slots) {
+      if (slot.closest(LINKEDIN_NON_CONTENT_SELECTORS.join(", "))) {
+        slot.remove();
+        continue;
+      }
+
+      const owner = linkedInOwnerForSlot(slot);
+      if (!owner || !isLinkedInScannableNode(owner)) {
+        slot.remove();
+        continue;
+      }
+
+      const existing = ownerSlots.get(owner);
+      if (existing?.isConnected) {
+        slot.remove();
+        continue;
+      }
+      ownerSlots.set(owner, slot);
+    }
+  }
+
+  function linkedInOwnerForSlot(slot) {
+    return (
+      slot.closest(linkedInCommentOwnerSelector()) ||
+      slot.closest(LINKEDIN_POST_SELECTORS.join(", "))
+    );
+  }
+
+  function linkedInCommentOwnerSelector() {
+    return `${LINKEDIN_COMMENT_SELECTORS.join(", ")}, [data-slop-frog-linkedin-comment="true"]`;
   }
 
   function cleanupStaleInjectedUi() {

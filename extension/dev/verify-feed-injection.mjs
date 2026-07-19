@@ -251,6 +251,32 @@ try {
   await evaluate(
     linkedInPage,
     `(() => {
+      const comment = document.querySelector('.comments-comment-item');
+      comment.insertAdjacentHTML('beforeend', '<div class="slop-frog-slot is-linkedin-comment" data-content-key="linkedin:manual-duplicate"><div class="slop-frog-controls"><button>duplicate</button></div></div>');
+      document.querySelector('aside').insertAdjacentHTML('beforeend', '<div class="slop-frog-slot" data-content-key="linkedin:right-rail-bug"><div class="slop-frog-controls"><button>floating</button></div></div>');
+      comment.setAttribute('data-slop-frog-duplicate-test', String(Date.now()));
+    })()`
+  );
+  const linkedInCleanupState = await waitForState(
+    linkedInPage,
+    `JSON.stringify({
+      rightRailControls: document.querySelectorAll('aside .slop-frog-controls, .scaffold-layout__aside .slop-frog-controls, footer .slop-frog-controls').length,
+      controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comments-comment-item-v2 .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
+      duplicateCommentRows: Array.from(document.querySelectorAll('.comments-comment-item, .comments-comment-item-v2, .comment-thread-node')).filter((comment) =>
+        comment.querySelectorAll(':scope > .slop-frog-slot.is-linkedin-comment').length > 1
+      ).length,
+      manualDuplicates: document.querySelectorAll('.slop-frog-slot[data-content-key="linkedin:manual-duplicate"], .slop-frog-slot[data-content-key="linkedin:right-rail-bug"]').length
+    })`,
+    (state) =>
+      state.rightRailControls === 0 &&
+      state.controls === 10 &&
+      state.duplicateCommentRows === 0 &&
+      state.manualDuplicates === 0,
+    "LinkedIn duplicate/comment and right-rail controls are swept away"
+  );
+  await evaluate(
+    linkedInPage,
+    `(() => {
       const card = document.querySelector('.feed-shared-update-v2');
       const slot = card.querySelector(':scope > .slop-frog-slot');
       card.prepend(slot);
@@ -352,6 +378,7 @@ try {
         stableControlCount,
       },
         linkedIn: linkedInState,
+        linkedInCleanup: linkedInCleanupState,
         linkedInReposition: linkedInRepositionState,
         recycledLinkedIn: recycledLinkedInState,
         dynamicLinkedIn: dynamicLinkedInState,
