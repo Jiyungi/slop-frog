@@ -209,6 +209,7 @@ try {
       oldCards: document.querySelectorAll('.feed-shared-update-v2').length,
       newCards: document.querySelectorAll('.fie-impression-container[data-view-name="feed-full-update"]').length,
       rawComments: document.querySelectorAll('.comments-comment-item, .comment-thread-node').length,
+      staleSlots: document.querySelectorAll('.slop-frog-slot[data-content-key="linkedin:stale-from-old-extension"]').length,
       controls: document.querySelectorAll('.feed-shared-update-v2 > .slop-frog-slot .slop-frog-controls, .fie-impression-container .slop-frog-controls, .comments-comment-item .slop-frog-controls, .comment-thread-node .slop-frog-controls').length,
       commentControls: document.querySelectorAll('.comments-comment-item .slop-frog-slot.is-linkedin-comment .slop-frog-controls, .comment-thread-node .slop-frog-slot.is-linkedin-comment .slop-frog-controls').length,
       duplicateSlots: (() => {
@@ -234,6 +235,7 @@ try {
       state.oldCards === 3 &&
       state.newCards === 1 &&
       state.rawComments === 5 &&
+      state.staleSlots === 0 &&
       state.controls === 9 &&
       state.commentControls === 5 &&
       state.duplicateSlots === 0 &&

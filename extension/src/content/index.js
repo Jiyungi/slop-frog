@@ -25,6 +25,7 @@
     if (!activeAdapter) return;
     settings = await getSettings();
     if (stopped) return;
+    cleanupStaleInjectedUi();
     scanVisiblePosts();
     observer = new MutationObserver(handleMutations);
     observer.observe(document.body, {
@@ -685,6 +686,12 @@
     for (const [contentKey, owner] of contentKeyOwners.entries()) {
       if (!owner?.isConnected) contentKeyOwners.delete(contentKey);
     }
+  }
+
+  function cleanupStaleInjectedUi() {
+    document
+      .querySelectorAll(".slop-frog-slot, .slop-frog-panel, .slop-frog-filter-card")
+      .forEach((node) => node.remove());
   }
 
   function renderPending(article, contentKey = "") {
@@ -1435,7 +1442,7 @@
   }
 
   function injectStyles() {
-    if (document.querySelector("#slop-frog-style")) return;
+    document.querySelector("#slop-frog-style")?.remove();
     const style = document.createElement("style");
     style.id = "slop-frog-style";
     style.textContent = `
