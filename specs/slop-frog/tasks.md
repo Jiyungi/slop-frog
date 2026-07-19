@@ -362,6 +362,7 @@ This means there is no teammate split. The work is still staged in waves so the 
     - Show flags, evidence, feedback, appeal, auto-filter on, auto-filter off.
     - _Requirements: 17.1-17.10_
     - **Verification:** Full demo path completes once without refresh-or-code-edit rescue.
+    - **Status:** Blocked from automation in a temporary Chrome profile because real X and LinkedIn redirect logged-out sessions to login pages. Synthetic end-to-end browser verification passes; final live verification must be run in a logged-in Chrome profile.
 
 ## Dependency graph
 
