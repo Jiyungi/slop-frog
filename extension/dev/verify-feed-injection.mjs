@@ -159,6 +159,35 @@ try {
     (text) => text.includes("Appeal sent"),
     "saved X appeal"
   );
+  await evaluate(
+    xPage,
+    `document.querySelector("main").insertAdjacentHTML("beforeend",
+      '<article data-testid="tweet"><div role="group" aria-label="Post actions"><span>Reply</span></div></article>'
+    )`
+  );
+  await waitForState(
+    xPage,
+    `document.querySelectorAll('article .slop-frog-controls').length`,
+    (count) => count === 4,
+    "gray control on a malformed X post"
+  );
+  await evaluate(
+    xPage,
+    `document.querySelector('article:last-of-type .slop-frog-controls button[title="View Slop Score evidence"]').click()`
+  );
+  const malformedState = await waitForState(
+    xPage,
+    `document.querySelector('article:last-of-type .slop-frog-panel[data-kind="evidence"]')?.innerText || ""`,
+    (text) => text.includes("Gray reason") && text.includes("extraction_failed"),
+    "gray extraction-failed evidence"
+  );
+  await evaluate(xPage, "window.dispatchEvent(new Event('scroll'))");
+  const stableControlCount = await waitForState(
+    xPage,
+    `document.querySelectorAll('article .slop-frog-controls').length`,
+    (count) => count === 4,
+    "stable X control count after scroll"
+  );
 
   const linkedInPage = await openPage(`https://www.linkedin.com:${fixturePort}/feed/`);
   const linkedInState = await waitForState(
@@ -175,7 +204,14 @@ try {
     JSON.stringify(
       {
         extensionId: loaded.id,
-        x: { ...xState, evidenceState, feedbackState, appealState },
+        x: {
+          ...xState,
+          evidenceState,
+          feedbackState,
+          appealState,
+          malformedState,
+          stableControlCount,
+        },
         linkedIn: linkedInState,
       },
       null,
@@ -232,7 +268,10 @@ async function waitForState(sessionId, expression, predicate, description) {
   let lastState;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const rawState = await evaluate(sessionId, expression);
-    lastState = rawState.startsWith("{") ? JSON.parse(rawState) : rawState;
+    lastState =
+      typeof rawState === "string" && rawState.startsWith("{")
+        ? JSON.parse(rawState)
+        : rawState;
     if (predicate(lastState)) return lastState;
     await wait(200);
   }

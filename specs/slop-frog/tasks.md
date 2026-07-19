@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan implements Slop Frog as a Chrome extension for X with local laptop inference and Supabase community labeling. The plan is structured for two people working in parallel after a shared-contract phase.
+This plan implements Slop Frog as a Chrome extension for X and LinkedIn with local laptop inference and Supabase community labeling. The plan is structured for two people working in parallel after a shared-contract phase.
 
 The build order is intentionally strict:
 
@@ -58,81 +58,81 @@ No task may be marked complete until its verification step has passed. Code exis
 
 - [x] 4. Define extension permission contract (Owner: Both)
   - [x] 4.1 Draft Manifest V3 permissions
-    - Include only `storage`, X/Twitter host permissions, localhost detector permission, and Supabase host permission.
+    - Include only `storage`, X/Twitter and LinkedIn host permissions, localhost detector permission, and Supabase host permission.
     - _Requirements: 14.1, 14.2, 14.3_
     - **Verification:** Manifest does not include `<all_urls>` or unrelated host permissions.
 
 - [ ] 5. Build Chrome extension scaffold (Owner: Person A)
-  - [ ] 5.1 Create Manifest V3 extension files
+  - [x] 5.1 Create Manifest V3 extension files
     - Implement `extension/manifest.json`, content script entry, background worker entry, and popup files.
     - _Requirements: 1.1, 14.1, 14.4_
     - **Verification:** Chrome can load the unpacked extension without manifest errors.
 
-  - [ ] 5.2 Add popup detector status UI
+  - [x] 5.2 Add popup detector status UI
     - Show local detector URL, detector health status, Supabase status placeholder, score toggle, and auto-filter toggle.
     - _Requirements: 7.1, 14.4, 14.5_
     - **Verification:** Opening the extension popup shows the controls and persists toggle changes with `chrome.storage`.
 
 - [ ] 6. Implement X extraction adapter (Owner: Person A)
-  - [ ] 6.1 Detect visible X posts
+  - [x] 6.1 Detect visible X posts
     - Use a content script with `MutationObserver` and safe DOM scanning to find post containers while scrolling.
     - _Requirements: 1.4, 1.5, 3.1_
     - **Verification:** On X, at least three visible posts are detected and logged or marked without duplicate processing.
 
-  - [ ] 6.2 Extract `PostEnvelope`
+  - [x] 6.2 Extract `PostEnvelope`
     - Extract tweet URL/ID when available, visible text, author handle, image URLs, normalized text, text hash, and extraction timestamp.
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
     - **Verification:** Three live X posts produce valid `PostEnvelope` objects matching `contracts.ts`.
 
-  - [ ] 6.3 Handle extraction failures as gray
+  - [x] 6.3 Handle extraction failures as gray
     - If a post cannot be parsed, return a gray result with reason `extraction_failed`.
     - _Requirements: 3.8, 5.6_
     - **Verification:** A forced malformed fixture produces gray, not a crash.
 
 - [ ] 7. Implement extension background worker (Owner: Person A)
-  - [ ] 7.1 Call local detector
+  - [x] 7.1 Call local detector
     - Send `ScoreRequest` to `http://localhost:8765/score` and handle success, timeout, and typed errors.
     - _Requirements: 4.1, 4.3, 4.7, 14.5_
     - **Verification:** With detector running, background worker receives a score; with detector stopped, popup and post UI show a clear connection error or gray state.
 
-  - [ ] 7.2 Add local cache
+  - [x] 7.2 Add local cache
     - Cache by `contentKey` so repeated posts are not rescored unnecessarily.
     - _Requirements: 1.5, 3.7_
     - **Verification:** The same `contentKey` is not sent to the detector repeatedly during one scroll session.
 
-  - [ ] 7.3 Compute Slop Score result
+  - [x] 7.3 Compute Slop Score result
     - Implement local Slop Score calculation using detector score and optional community aggregate.
     - _Requirements: 5.1, 6.1, 6.2, 6.3, 6.4_
     - **Verification:** Fixture scores produce expected red, yellow, green, and gray labels.
 
 - [ ] 8. Implement in-feed flag UI (Owner: Person A)
-  - [ ] 8.1 Render compact flags on X posts
+  - [x] 8.1 Render compact flags on X posts
     - Insert the compact Slop Frog controls from `specs/slop-frog/ui.md`: flag/evidence, feedback, and appeal. Use quiet icon-first buttons and avoid unnecessary explanatory text.
     - _Requirements: 6.6, 6.7, 8.8_
     - **Verification:** At least three X posts show stable flags while scrolling and no text overlaps post content.
 
-  - [ ] 8.2 Render evidence panel
+  - [x] 8.2 Render evidence panel
     - Show the inline evidence panel from `specs/slop-frog/ui.md`: detector score, Slop Score, community score, modality rows, gray reason, and simple history area. Do not include feedback or appeal controls inside the evidence panel.
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
     - **Verification:** Clicking a flag opens the panel and all required sections render from fixture data.
 
-  - [ ] 8.3 Implement auto-filter red posts
+  - [x] 8.3 Implement auto-filter red posts
     - Collapse red posts only when auto-filter is enabled and include a reveal control.
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
     - **Verification:** A red fixture collapses only when auto-filter is on; yellow, green, and gray do not collapse.
 
-  - [ ] 8.4 Render separate feedback and appeal panels
+  - [x] 8.4 Render separate feedback and appeal panels
     - Feedback opens from the `MessageSquareCheck` icon. Appeal opens from the `ShieldAlert` icon. Each panel asks one focused question and stays separate from evidence.
     - _Requirements: 8.7, 9.6, 12.1_
     - **Verification:** Feedback and appeal open from their own buttons, and neither action appears inside the evidence panel.
 
 - [ ] 9. Implement evidence charts in UI (Owner: Person A)
-  - [ ] 9.1 Add longitudinal score graph
+  - [x] 9.1 Add longitudinal score graph
     - Render time on x-axis and Slop Score on y-axis using verdict history.
     - _Requirements: 13.1, 13.2_
     - **Verification:** Mock verdict history renders a visible chart inside the evidence panel.
 
-  - [ ] 9.2 Add volume vs score graph
+  - [x] 9.2 Add volume vs score graph
     - Render review/repost volume on x-axis and Slop Score on y-axis.
     - _Requirements: 13.3, 13.4, 13.5_
     - **Verification:** Mock volume history renders a visible chart inside the evidence panel.
@@ -198,35 +198,35 @@ No task may be marked complete until its verification step has passed. Code exis
     - **Verification:** No code path, cron job, or script attempts to fetch X posts from the backend.
 
 - [ ] 15. Integrate extension with local detector (Owner: Integrator)
-  - [ ] 15.1 Run end-to-end local scoring
+  - [x] 15.1 Run end-to-end local scoring
     - Start local detector, load extension, open X, score live posts.
     - _Requirements: 4.1, 4.4, 6.6, 16.1, 16.2, 16.3_
     - **Verification:** At least three X posts receive flags from local detector responses.
 
 - [ ] 16. Integrate extension with Supabase (Owner: Integrator)
-  - [ ] 16.1 Connect vote action to Supabase
+  - [x] 16.1 Connect vote action to Supabase
     - From the evidence panel, submit a community vote and fetch updated aggregate.
     - _Requirements: 9.1, 9.6, 9.7, 16.5_
     - **Verification:** A vote submitted from the extension appears in Supabase and changes or creates the aggregate.
 
-  - [ ] 16.2 Connect appeal action to Supabase
+  - [x] 16.2 Connect appeal action to Supabase
     - Submit an appeal from the evidence panel.
     - _Requirements: 12.1, 12.2, 16.4_
     - **Verification:** Appeal appears in Supabase and the evidence panel reflects submitted status.
 
 - [ ] 17. Final demo verification (Owner: Integrator)
-  - [ ] 17.1 Verify permission posture
+  - [x] 17.1 Verify permission posture
     - Inspect manifest permissions.
     - _Requirements: 14.1, 14.2, 14.3_
-    - **Verification:** Manifest requests only storage, X/Twitter hosts, localhost detector, and Supabase host.
+    - **Verification:** Manifest requests only storage, X/Twitter and LinkedIn hosts, localhost detector, and Supabase host.
 
-  - [ ] 17.2 Verify full demo path
-    - Demo local detector health, X post extraction, flags, evidence panel, community vote, appeal, and red auto-filter.
+  - [x] 17.2 Verify full demo path
+    - Demo local detector health, X and LinkedIn post extraction, flags, evidence panel, community vote, appeal, and red auto-filter.
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7_
     - **Verification:** The full demo path is manually completed once without refreshing or editing code mid-demo.
 
 - [ ] 18. README and handoff (Owner: Integrator)
-  - [ ] 18.1 Write local setup instructions
+  - [x] 18.1 Write local setup instructions
     - Explain how to run the local detector, load the unpacked extension, configure Supabase, and demo the product.
     - _Requirements: 14.6, 16.1, 16.2_
     - **Verification:** A teammate can follow the README and reach detector health plus loaded extension.

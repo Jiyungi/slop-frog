@@ -53,23 +53,13 @@ try {
   const popupTarget = await command("Target.createTarget", {
     url: `chrome-extension://${loaded.id}/src/popup/popup.html`,
   });
-  await wait(1400);
+  await wait(500);
   const attached = await command("Target.attachToTarget", {
     targetId: popupTarget.targetId,
     flatten: true,
   });
 
-  const popupState = await evaluate(
-    attached.sessionId,
-    `JSON.stringify({
-      text: document.body.innerText,
-      detector: document.querySelector("#detectorStatus")?.dataset.state,
-      community: document.querySelector("#supabaseStatus")?.dataset.state,
-      endpoint: document.querySelector("#detectorUrl")?.textContent,
-      scoreToggle: document.querySelector("#showNumericScore")?.checked,
-      filterToggle: document.querySelector("#autoFilterRed")?.checked
-    })`
-  );
+  const popupState = await waitForPopupState(attached.sessionId);
   const savedState = await evaluate(
     attached.sessionId,
     `new Promise((resolve) => {
@@ -123,6 +113,10 @@ try {
     process.env.SLOP_FROG_VERIFY_SUPABASE === "1"
       ? await verifyCommunityActions(attached.sessionId)
       : null;
+  const offlineVerification =
+    process.env.SLOP_FROG_VERIFY_OFFLINE === "1"
+      ? await verifyOfflineFallback(attached.sessionId)
+      : null;
 
   console.log(
     JSON.stringify(
@@ -134,6 +128,7 @@ try {
         autoFilterPersisted: parsedSavedState.persisted,
         scoreVerification,
         communityVerification,
+        offlineVerification,
       },
       null,
       2
@@ -170,6 +165,26 @@ async function evaluate(sessionId, expression, awaitPromise = false) {
     throw new Error(result.exceptionDetails.text || "Popup evaluation failed.");
   }
   return result.result.value;
+}
+
+async function waitForPopupState(sessionId) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const snapshot = await evaluate(
+      sessionId,
+      `JSON.stringify({
+        text: document.body.innerText,
+        detector: document.querySelector("#detectorStatus")?.dataset.state,
+        community: document.querySelector("#supabaseStatus")?.dataset.state,
+        endpoint: document.querySelector("#detectorUrl")?.textContent,
+        scoreToggle: document.querySelector("#showNumericScore")?.checked,
+        filterToggle: document.querySelector("#autoFilterRed")?.checked
+      })`
+    );
+    const state = JSON.parse(snapshot);
+    if (state.community === "connected") return snapshot;
+    await wait(200);
+  }
+  throw new Error("Supabase did not become connected in the popup.");
 }
 
 async function verifyBackgroundScoring(sessionId) {
@@ -287,11 +302,53 @@ async function verifyCommunityActions(sessionId) {
   assert(appeal?.ok, `Appeal failed: ${appeal?.error || "unknown error"}.`);
   assert(appeal?.savedAppeal?.id, "Appeal did not return a saved appeal ID.");
 
+  const linkedInPost = {
+    ...post,
+    platform: "linkedin",
+    contentKey: `linkedin:cdp-community-${timestamp}`,
+    tweetId: undefined,
+    url: `https://www.linkedin.com/feed/update/urn:li:activity:${timestamp}/`,
+    textHash: `linkedin-cdp-community-${timestamp}`,
+  };
+  const [linkedInVote] = await sendExtensionMessages(sessionId, [
+    {
+      type: "SLOP_FROG_SUBMIT_VOTE",
+      payload: { contentKey: linkedInPost.contentKey, vote: "looks_human", post: linkedInPost },
+    },
+  ]);
+  assert(linkedInVote?.ok, `LinkedIn community vote failed: ${linkedInVote?.error || "unknown error"}.`);
+  assert(
+    linkedInVote?.communityAggregate?.contentKey === linkedInPost.contentKey,
+    "LinkedIn vote did not create the requested community aggregate."
+  );
+
   return {
     contentKey: post.contentKey,
     aggregate: vote.communityAggregate,
     appealId: appeal.savedAppeal.id,
+    linkedInAggregate: linkedInVote.communityAggregate,
   };
+}
+
+async function verifyOfflineFallback(sessionId) {
+  const fixture = JSON.parse(
+    readFileSync(path.join(repositoryRoot, "extension/src/shared/fixtures.json"), "utf8")
+  ).find((entry) => entry.name === "medium-yellow");
+  const post = {
+    ...fixture.post,
+    contentKey: `x:cdp-offline-${Date.now()}`,
+    tweetId: `cdp-offline-${Date.now()}`,
+  };
+  const [response] = await sendExtensionMessages(sessionId, [
+    { type: "SLOP_FROG_SCORE_POST", post },
+  ]);
+  assert(response?.ok, "Offline score did not return an extension response.");
+  assert(response?.result?.label === "gray", "Offline score was not shown as gray.");
+  assert(
+    response?.result?.reasons?.includes("detector_unavailable"),
+    `Offline score did not report detector_unavailable: ${JSON.stringify(response?.result)}.`
+  );
+  return { label: response.result.label, reason: response.result.reasons[0] };
 }
 
 async function sendExtensionMessages(sessionId, messages) {
